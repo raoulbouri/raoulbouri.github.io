@@ -1,0 +1,70 @@
+## The problem
+
+A robot arm that only has joint encoders can't obviously tell when it has touched
+something. Force/torque sensors are the usual answer, but they add cost, wiring,
+and failure points. The question here: **can you detect and estimate external
+contact torque from proprioception alone?**
+
+{/* TODO(Rahul): 2–3 sentences on why this matters to you and to contact-rich
+    manipulation. Keep it concrete. */}
+
+## Motivation
+
+The interactive arm at the top of this site is a nod to exactly this: when you
+click, it registers a contact and draws its estimate and uncertainty. The real
+system does the same thing from encoder signals rather than a mouse click.
+
+{/* TODO(Rahul): what drew you to estimation + learning as a combination? */}
+
+## The key engineering decision
+
+Instead of chasing a perfectly accurate dynamics model, I used a **deliberately
+imperfect analytical model** and paired it with a neural-network residual trained
+**only on contact-free data**. The insight: if the correction has only ever seen
+free-space motion, then any disagreement between model and reality *during*
+contact must come from an external force. That disagreement becomes an explicit
+external-torque signal for the filter to estimate.
+
+## Architecture
+
+- **Filter model** — intentionally-wrong analytical dynamics + a learned
+  free-space correction (residual network).
+- **Plant** — full physics simulation (MuJoCo 3.9), hidden from the filter,
+  producing ground truth.
+- **Augmented EKF** — estimates joint state *and* external torque; contact shows
+  up as the residual the free-space model can't explain.
+
+{/* TODO(Rahul): drop the architecture diagram from the repo here:
+    ![Architecture](/projects/contact-arch.png) */}
+
+## Implementation notes
+
+- Python 3.13 (ARM64), dependencies managed with `uv`.
+- Fully seeded and deterministic — datasets and trained weights regenerate from
+  scripts rather than being committed.
+- Regression suite in `pytest` covering estimation, binary detection, and
+  baseline comparison.
+
+## Results
+
+- Estimation error sits near the sensor-noise floor **despite the deliberately
+  wrong model**.
+- Uncertainty estimates are statistically consistent across most conditions.
+- **Faster contact detection than classical momentum observers** — even ones
+  given perfect dynamics.
+
+{/* TODO(Rahul): embed the ROC / precision-recall curves and the estimation GIF:
+    ![Estimation](/projects/contact-estimation.gif) */}
+
+## What was hard / what I'd change
+
+{/* TODO(Rahul): the honest part. Where does the estimator get overconfident?
+    What breaks the consistency assumption? What's the sim-to-real risk? */}
+
+## Future work
+
+{/* TODO(Rahul): real hardware validation? multi-contact? richer residual model? */}
+
+---
+
+**Repo:** [proprioceptive-contact-detection](https://github.com/raoulbouri/proprioceptive-contact-detection)

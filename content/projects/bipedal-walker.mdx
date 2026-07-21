@@ -1,0 +1,54 @@
+> **Status: in progress.** The sim-to-real *pipeline* is built and documented.
+> The balance controller is what I'm building now — right now the robot topples
+> when physics runs. This page is honest about that.
+
+## The goal
+
+A small, buildable bipedal walker I can take from CAD all the way to a physical
+robot: design in Onshape, simulate in MuJoCo, and eventually deploy control onto
+real hardware.
+
+{/* TODO(Rahul): what's the long-term research target — locomotion RL? classical
+    control? a testbed for something else? */}
+
+## What's done: the CAD → sim pipeline
+
+An automated four-stage conversion pipeline:
+
+1. **Onshape** URDF export.
+2. **URDF preprocessing** with compiler directives.
+3. **MuJoCo compilation** to raw MJCF.
+4. **Postprocessing** for RL readiness — actuators, sensors, floating base.
+
+The result is reproducible: change the CAD, regenerate the sim model with one
+command. Two variants are maintained (with and without the onboard Jetson).
+
+{/* TODO(Rahul): embed the pipeline diagram + a MuJoCo render still:
+    ![Pipeline](/projects/biped-pipeline.png) */}
+
+## The hardware
+
+- **784 g** (with Jetson) / 604 g (baseline).
+- **6 actuated joints**, 2 passive, **24 sensors**.
+- Jetson Orin Nano compute, ST3215 servos (position control, ±3 N·m).
+
+## What's not done yet
+
+**No balance controller.** Run the physics and the robot falls over. That's the
+next milestone — and it's deliberately the honest framing here: this is a live
+research project, not a finished result.
+
+## What's next
+
+- Balance / gait control — evaluating RL (policy trained in the MuJoCo model) vs.
+  a classical controller as a baseline.
+- {/* TODO(Rahul): your planned approach + milestones. */}
+
+## Why it's here anyway
+
+Well-documented infrastructure is a real deliverable. The pipeline, the memory
+notes, and the reproducible build are the foundation the control work stands on.
+
+---
+
+**Repo:** [bipedal-walker](https://github.com/raoulbouri/bipedal-walker)
