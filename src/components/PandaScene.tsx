@@ -350,7 +350,9 @@ export default function PandaScene() {
       frameloop={reduced ? "demand" : "always"}
       camera={{ position: [1.35, -1.15, 0.85], fov: 38, up: [0, 0, 1] }}
       gl={{ antialias: true, alpha: true }}
-      style={{ touchAction: "none" }}
+      // pan-y (not "none"): the only interaction is a tap-to-grasp, so a
+      // vertical swipe that starts over the canvas must still scroll the page.
+      style={{ touchAction: "pan-y" }}
     >
       <CameraRig />
       <ambientLight intensity={0.75} />
