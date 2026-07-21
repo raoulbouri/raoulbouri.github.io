@@ -1,69 +1,83 @@
+![No force sensor — the estimate jumps from zero to the true contact torque the instant the gripper touches the block, using nothing but joint encoders.](/projects/contact-detection-demo.gif)
+
 ## The problem
 
-A robot arm that only has joint encoders can't obviously tell when it has touched
-something. Force/torque sensors are the usual answer, but they add cost, wiring,
-and failure points. The question here: **can you detect and estimate external
-contact torque from proprioception alone?**
+Robots working around people or manipulating unknown objects need to detect
+contact. Wrist force/torque sensors solve this but add cost, weight, and only
+measure forces at a single location.
 
-{/* TODO(Rahul): 2–3 sentences on why this matters to you and to contact-rich
-    manipulation. Keep it concrete. */}
+An alternative is to infer contact from joint motion: if the robot's dynamics
+predict one motion but the encoders report another, the difference must come
+from an external force. The challenge is that real robots never have perfect
+models—payloads change, friction drifts, and inertial parameters are inaccurate.
 
-## Motivation
+This project asks a practical question: **can reliable contact estimation still
+work with a deliberately imperfect dynamics model?**
 
-The interactive arm at the top of this site is a nod to exactly this: when you
-click, it registers a contact and draws its estimate and uncertainty. The real
-system does the same thing from encoder signals rather than a mouse click.
+## Key idea
 
-{/* TODO(Rahul): what drew you to estimation + learning as a combination? */}
+Instead of chasing a perfect physics model, the estimator combines:
 
-## The key engineering decision
+1. A hand-derived analytical dynamics model with **deliberately incorrect**
+   masses, centers of mass, and damping.
+2. A small neural network trained **only on free-space motion** to compensate
+   for model error.
 
-Instead of chasing a perfectly accurate dynamics model, I used a **deliberately
-imperfect analytical model** and paired it with a neural-network residual trained
-**only on contact-free data**. The insight: if the correction has only ever seen
-free-space motion, then any disagreement between model and reality *during*
-contact must come from an external force. That disagreement becomes an explicit
-external-torque signal for the filter to estimate.
+Since the network never observes contact, any remaining discrepancy during
+interaction must be explained by an external-force state inside an Extended
+Kalman Filter (EKF), producing both a torque estimate and its uncertainty.
 
 ## Architecture
 
-- **Filter model** — intentionally-wrong analytical dynamics + a learned
-  free-space correction (residual network).
-- **Plant** — full physics simulation (MuJoCo 3.9), hidden from the filter,
-  producing ground truth.
-- **Augmented EKF** — estimates joint state *and* external torque; contact shows
-  up as the residual the free-space model can't explain.
+The system uses two independent models:
 
-{/* TODO(Rahul): drop the architecture diagram from the repo here:
-    ![Architecture](/projects/contact-arch.png) */}
+- **Plant** — a MuJoCo simulation generating realistic sensor data and ground
+  truth.
+- **Filter model** — the imperfect analytical model with its learned
+  free-space correction. It has no knowledge that the block exists.
 
-## Implementation notes
+![Two-model architecture: the plant (red) is hidden from the filter's own imperfect model (blue); the gap between them becomes the external-torque estimate.](/projects/contact-detection-architecture.png)
 
-- Python 3.13 (ARM64), dependencies managed with `uv`.
-- Fully seeded and deterministic — datasets and trained weights regenerate from
-  scripts rather than being committed.
-- Regression suite in `pytest` covering estimation, binary detection, and
-  baseline comparison.
+Only noisy joint position and velocity encoders are available—there are no
+force or contact sensors. Performance is evaluated on continuous torque
+estimation, binary contact detection, and cross-seed validation.
+
+## Implementation
+
+- Symbolic Euler–Lagrange dynamics (`sympy`) integrated with RK4, plus a small
+  feed-forward residual network trained on free-space trajectories.
+- Augmented-state EKF with Joseph-form covariance updates and an analytical
+  Jacobian for external torque.
+- Symbolic common-subexpression elimination (`cse=True`) reduced process-model
+  execution from slower than MuJoCo to under 2 ms, enabling real-time operation.
+- Fully deterministic pipeline with 182 regression tests covering estimation,
+  detection, and baseline comparisons.
 
 ## Results
 
-- Estimation error sits near the sensor-noise floor **despite the deliberately
-  wrong model**.
-- Uncertainty estimates are statistically consistent across most conditions.
-- **Faster contact detection than classical momentum observers** — even ones
-  given perfect dynamics.
+- **Reliable contact detection:** ROC AUC **0.99** with roughly **17×**
+  detection SNR across seeds.
+- **Accurate despite model mismatch:** contact-torque RMSE is within **4%** of
+  the same EKF using the true dynamics (0.047 vs. 0.045 N·m).
+- **Low false alarms:** **0–1.1%** false-positive rate across held-out seeds.
+- **Outperforms a classical momentum observer**, even when the observer is
+  given the simulator's true dynamics.
 
-{/* TODO(Rahul): embed the ROC / precision-recall curves and the estimation GIF:
-    ![Estimation](/projects/contact-estimation.gif) */}
+![ROC and precision-recall curves at three operating points along the false-alarm / missed-contact trade-off.](/projects/contact-detection-roc-pr.png)
 
-## What was hard / what I'd change
+## Limitations
 
-{/* TODO(Rahul): the honest part. Where does the estimator get overconfident?
-    What breaks the consistency assumption? What's the sim-to-real risk? */}
+The main weakness is **contact transitions**. Torque changes faster than the
+EKF assumes, causing temporary uncertainty miscalibration. Measuring genuine
+false positives also required filtering out contact chatter and EKF startup
+transients.
 
 ## Future work
 
-{/* TODO(Rahul): real hardware validation? multi-contact? richer residual model? */}
+- Temporal detection using short evidence windows.
+- Adaptive uncertainty during contact transitions.
+- Estimating contact location, not just net joint torque.
+- Validation on real hardware.
 
 ---
 

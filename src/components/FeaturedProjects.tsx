@@ -7,11 +7,9 @@ export function FeaturedProjects() {
     <section id="projects" className="section">
       <div className="container-max">
         <Reveal>
-          <p className="eyebrow mb-3">Featured Projects</p>
+          <span className="section-kicker" aria-hidden="true" />
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 className="max-w-2xl text-2xl font-semibold sm:text-3xl">
-              Three systems, each with the honest engineering behind it.
-            </h2>
+            <h2 className="section-heading">Featured Projects</h2>
             <p className="text-sm text-faint">Estimation · RL control · sim-to-real</p>
           </div>
         </Reveal>

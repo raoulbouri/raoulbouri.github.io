@@ -29,11 +29,11 @@ export const projects: Project[] = [
       "Estimating external contact torque on a robot arm from joint encoders alone — by admitting the dynamics model is wrong and letting a Kalman filter turn that disagreement into signal.",
     tags: ["EKF", "Residual Learning", "MuJoCo", "Estimation", "Python"],
     repo: "https://github.com/raoulbouri/proprioceptive-contact-detection",
-    cover: "/projects/contact-detection-cover.png", // TODO(Rahul): add asset
+    cover: "/projects/contact-detection-demo.gif",
     highlights: [
       "Deliberately-wrong analytical model + NN residual trained only on contact-free data",
       "Augmented EKF: model disagreement during contact becomes the external-torque estimate",
-      "Faster detection than classical momentum observers; seeded, deterministic pytest suite",
+      "AUC 0.99, detection SNR ~17×, faster than a classical momentum observer with perfect dynamics",
     ],
     featured: true,
     order: 1,
@@ -46,7 +46,7 @@ export const projects: Project[] = [
       "A two-tier RL controller for a Franka Panda in ROS + Gazebo — and an honest account of why symbolic Lagrangian priors broke and residual RL didn't.",
     tags: ["Reinforcement Learning", "SAC", "ROS", "Gazebo", "PyTorch"],
     repo: "https://github.com/raoulbouri/Franka_Panda_SAC_using_ROS_and_Gazebo",
-    cover: "/projects/franka-cover.png", // TODO(Rahul): add asset
+    // TODO(Rahul): add a real cover asset — falls back to the schematic placeholder until then.
     highlights: [
       "High-level SAC sequences Approach → Grasp → Transport → Place over low-level controllers",
       "DeLaN / symbolic Lagrangian caused numerical instability → pivoted to residual RL",
@@ -63,7 +63,7 @@ export const projects: Project[] = [
       "An Onshape → URDF → MuJoCo pipeline for a 784g Jetson-class biped. The build system is done; the balance controller is what I'm building now.",
     tags: ["MuJoCo", "Sim-to-Real", "URDF/MJCF", "Hardware", "In progress"],
     repo: "https://github.com/raoulbouri/bipedal-walker",
-    cover: "/projects/biped-cover.png", // TODO(Rahul): add asset
+    // TODO(Rahul): add a real cover asset — falls back to the schematic placeholder until then.
     highlights: [
       "Automated CAD→sim pipeline: Onshape URDF export → MJCF compile → RL-ready postprocess",
       "784g biped, 6 actuated joints, 24 sensors, Jetson Orin Nano + ST3215 servos",

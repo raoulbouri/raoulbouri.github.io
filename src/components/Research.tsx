@@ -11,8 +11,9 @@ export function Research() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <Reveal>
+              <span className="section-kicker" aria-hidden="true" />
               <p className="eyebrow mb-3">Research Direction</p>
-              <h2 className="text-2xl font-semibold sm:text-3xl">
+              <h2 className="section-heading">
                 Toward robots that estimate, learn, and act under uncertainty.
               </h2>
             </Reveal>
@@ -34,8 +35,9 @@ export function Research() {
 
           <div>
             <Reveal>
+              <span className="section-kicker" aria-hidden="true" />
               <p className="eyebrow mb-3">Skills</p>
-              <h2 className="text-2xl font-semibold sm:text-3xl">The toolkit</h2>
+              <h2 className="section-heading">The toolkit</h2>
             </Reveal>
             <Reveal delay={0.05}>
               <div className="mt-3 space-y-3">
@@ -60,7 +62,8 @@ export function Research() {
 
         <Reveal delay={0.1}>
           <div className="mt-8 border-t border-border pt-6">
-            <p className="eyebrow mb-4">Publications</p>
+            <span className="section-kicker" aria-hidden="true" />
+            <h2 className="section-heading mb-4">Publications</h2>
             <ul className="space-y-4">
               {publications.map((pub) => (
                 <li key={pub.url} className="text-sm leading-relaxed text-muted">

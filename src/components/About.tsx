@@ -23,8 +23,9 @@ export function About() {
           </Reveal>
 
           <Reveal delay={0.05}>
-            <div className="space-y-4 text-lg leading-relaxed text-muted">
-              <p className="font-semibold text-ink">Moving intelligence from the cloud into the physical world.</p>
+            <span className="section-kicker" aria-hidden="true" />
+            <h2 className="section-heading">Moving intelligence from the cloud into the physical world.</h2>
+            <div className="mt-3 space-y-4 text-lg leading-relaxed text-muted">
               <p>
                 I&apos;ve engineered production AI systems across agentic search, multimodal AI, and large-scale ML infrastructure. What excites me now is approaching robotics with the curiosity of a researcher and the mindset of a production engineer.
               </p>

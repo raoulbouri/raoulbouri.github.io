@@ -9,7 +9,7 @@ export function Contact() {
         <Reveal>
           <div className="rounded-2xl border border-border bg-surface p-8 sm:p-12">
             <p className="eyebrow mb-3">Contact</p>
-            <h2 className="max-w-2xl text-2xl font-semibold sm:text-3xl">
+            <h2 className="section-heading max-w-2xl">
               Building something in robotics or applied ML? Let&apos;s talk.
             </h2>
             <p className="mt-4 max-w-xl text-muted">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Project } from "@content/projects";
 
 export function ProjectCard({ project }: { project: Project }) {
@@ -10,9 +11,20 @@ export function ProjectCard({ project }: { project: Project }) {
       {/* Cover media. Falls back to a schematic placeholder until a real asset
           is dropped at project.cover. */}
       <div className="relative aspect-[16/9] overflow-hidden border-b border-border bg-surface-2">
-        <div className="absolute inset-0 grid place-items-center">
-          <CoverPlaceholder />
-        </div>
+        {project.cover ? (
+          <Image
+            src={project.cover}
+            alt={`${project.title} demo`}
+            fill
+            unoptimized
+            className="object-cover"
+            sizes="(min-width: 1024px) 33vw, 90vw"
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center">
+            <CoverPlaceholder />
+          </div>
+        )}
         <span
           className={`absolute left-3 top-3 chip ${
             project.status === "ongoing" ? "border-accent/50 text-accent" : ""
@@ -46,7 +58,7 @@ export function ProjectCard({ project }: { project: Project }) {
         </div>
 
         <span className="mt-4 inline-flex items-center gap-1 font-mono text-xs text-accent">
-          Read the case study
+          Read the Blog
           <span className="transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>
         </span>
       </div>
