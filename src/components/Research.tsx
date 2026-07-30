@@ -19,15 +19,10 @@ export function Research() {
             </Reveal>
             <Reveal delay={0.05}>
               <div className="mt-3 space-y-4 text-lg leading-relaxed text-muted">
-                {/* TODO(Rahul): your research statement. What questions pull you?
-                    Contact-rich manipulation? Learned dynamics? Legged control? */}
                 <p>
                   My interests sit at the seam between classical estimation and learning: using
                   filtering to make learned models honest about what they don&apos;t know, and using
                   learning to cover what first-principles models miss.
-                </p>
-                <p className="text-base text-faint">
-                  TODO(Rahul): replace with your real statement of interest before sharing widely.
                 </p>
               </div>
             </Reveal>

@@ -1,53 +1,115 @@
-> **Status: in progress.** The sim-to-real *pipeline* is built and documented.
-> The balance controller is what I'm building now — right now the robot topples
-> when physics runs. This page is honest about that.
+![The physical robot: 784 g, 3D-printed frame, six ST3215 servos, Jetson Orin Nano on the torso.](/projects/biped-hardware.jpg)
 
-## The goal
+> **Status: in progress.** The CAD→sim pipeline and the digital-twin validation
+> are done. No walking controller is deployed, and deliberately so — the work
+> below is about earning the right to build one.
 
-A small, buildable bipedal walker I can take from CAD all the way to a physical
-robot: design in Onshape, simulate in MuJoCo, and eventually deploy control onto
-real hardware.
+A 784 g bipedal walker: designed in Onshape, exported through URDF into MuJoCo,
+six actuated joints on ST3215 servos, Jetson Orin Nano riding on the torso. The
+pipeline regenerates the simulation model from CAD with a single command.
 
-{/* TODO(Rahul): what's the long-term research target — locomotion RL? classical
-    control? a testbed for something else? */}
+The interesting part isn't the pipeline. It's what happened when I stopped
+building the controller and started asking whether the simulator deserved to be
+trusted at all.
 
-## What's done: the CAD → sim pipeline
+## The question that reframed the project
 
-An automated four-stage conversion pipeline:
+Rather than write an MPC and debug it against a simulator of unknown quality, I
+ran a dedicated validation phase whose only deliverable was an answer to: **can
+this digital twin predict the real robot, and is it good enough to design a
+controller against?**
 
-1. **Onshape** URDF export.
-2. **URDF preprocessing** with compiler directives.
-3. **MuJoCo compilation** to raw MJCF.
-4. **Postprocessing** for RL readiness — actuators, sensors, floating base.
+Answering that honestly turned up a class of bug I now look for everywhere.
 
-The result is reproducible: change the CAD, regenerate the sim model with one
-command. Two variants are maintained (with and without the onboard Jetson).
+## The finding: a missing physical term wearing a control gain as a disguise
 
-{/* TODO(Rahul): embed the pipeline diagram + a MuJoCo render still:
-    ![Pipeline](/projects/biped-pipeline.png) */}
+The shipped actuator model could not stabilize the robot. Not marginally —
+**3.3× too slow**, with a bandwidth of 4.4 rad/s against unstable plant modes
+running up to 14.4 rad/s. The robot was uncontrollable in simulation before a
+single line of controller existed.
 
-## The hardware
+![Instability rate at each pose against actuator bandwidth. The shipped actuator (4.4 rad/s) sits below almost every mode it has to suppress; the corrected model clears all of them.](/projects/biped-bandwidth-margin.png)
 
-- **784 g** (with Jetson) / 604 g (baseline).
-- **6 actuated joints**, 2 passive, **24 sensors**.
-- Jetson Orin Nano compute, ST3215 servos (position control, ±3 N·m).
+The reflex is to tune gains. That would have been wrong. The real defect was a
+**missing physical term**: a DC motor's torque–speed line implies a back-EMF
+damping of `τ_stall / ω_noload` = **0.624 N·m·s/rad**. The model used **0.05** —
+12.5× too small.
 
-## What's not done yet
+Here's the part worth internalizing. Because that damping was absent, the
+derivative gain `kv` had been quietly fitted to do damping's job as a velocity
+limiter. So the model *passed* every check that didn't specifically interrogate
+bandwidth — mass, inertia, CoM, contact, friction, and kinematics all validated
+fine. One parameter was impersonating another, and the impersonation was
+invisible to any test that examined a single subsystem in isolation.
 
-**No balance controller.** Run the physics and the robot falls over. That's the
-next milestone — and it's deliberately the honest framing here: this is a live
-research project, not a finished result.
+With the correct damping restored, the velocity ceiling stops being a fitted
+constant and falls out of physics: 2.5 / 0.624 = **4.00 rad/s**, comfortably
+inside the datasheet's 4.712, and `kv` is freed to be a damping gain again. Of
+30 candidate parameter sets that pass the constrained search, **every one uses
+the physical damping value; none with 0.05 passes.**
 
-## What's next
+**The generalizable lesson:** this only surfaced by cross-checking two
+independent analyses — system identification (what the datasheet *permits*)
+against modal analysis (what stabilizing the plant *requires*). Each was
+internally self-consistent. The contradiction lived in the gap between them.
+Digital-twin bugs of this kind don't announce themselves inside any one
+subsystem; you find them by deriving the same physical quantity two different
+ways and demanding the answers agree.
 
-- Balance / gait control — evaluating RL (policy trained in the MuJoCo model) vs.
-  a classical controller as a baseline.
-- {/* TODO(Rahul): your planned approach + milestones. */}
+## Three more things the validation caught
 
-## Why it's here anyway
+**Analyzing the nominal pose is not analyzing the robot.** Earlier work
+linearized only about standing. Across 12 poses spanning a gait, the worst case
+is `lateral_lean` at 14.42 rad/s with 6 unstable modes — the stand-pose-only
+number understated the requirement by **1.86×**, and every pose in that set is
+one a walking gait must pass through. The structural conclusions (3–6 unstable
+modes everywhere, all controllable, all observable from encoders + IMU alone)
+held up. The *rates* did not.
 
-Well-documented infrastructure is a real deliverable. The pipeline, the memory
-notes, and the reproducible build are the foundation the control work stands on.
+**An assumption was carrying most of the dynamics.** Joint armature had been set
+to 0.01 — a value supplying **86–99% of total joint inertia** while not being
+derivable from the datasheet at all. It was an assumption doing the work of a
+measurement. It has since been resolved from a verified gear ratio (N=345 →
+0.028), but the habit it taught is the point: audit which of your parameters are
+simultaneously load-bearing *and* unverified.
+
+**The dominant error source wasn't the obvious one.** For linear-model validity
+I expected contact switching or horizon length to dominate. It's **Coulomb
+friction** — zeroing `frictionloss` collapses linearization error by four orders
+of magnitude. And on reduced-order models, plain ALIP turns out to be
+algebraically *identical* to LIPM on this robot (verified to 1e-12), so the
+textbook upgrade buys literally nothing; only the centroidal-momentum term —
+worth 12–21% here — actually helps, out to a usable horizon of about 0.20 s.
+
+## On the RL side: the reward curve lied
+
+In parallel I trained a locomotion policy. The training curves looked healthy.
+Evaluated on **reward-independent** physical metrics, it failed:
+
+- duty factor **1.00 / 0.98** — both feet planted essentially always. That's not
+  a gait, it's twitchy double-support.
+- commanded 0.30 m/s, realized **0.002 m/s**.
+- it "survived" the episode — by standing still, which the reward tolerated.
+
+The verdict I wrote into the results file was blunt: *do not trust this
+checkpoint from training curves alone.* The policy had found the degenerate
+optimum — don't fall — that satisfies the objective without doing the task. It's
+the same lesson that runs through [my CS 285 work](/projects/deep-rl-cs285):
+return is a scalar projection of a behavior, and the degenerate behaviors are
+usually the easiest ones to find.
+
+## Where it stands
+
+Mass, inertia, CoM, contact, friction, kinematics: validated. Controllability
+and observability: established across the pose envelope rather than one pose.
+The actuator — the component that decides whether this robot can be stabilized
+at all — **has never been measured on hardware.** Every conclusion above is
+conditional on a datasheet.
+
+So the honest position is that building the controller in simulation now is
+reasonable; deploying it is not. The highest-value next experiment isn't a
+better controller — it's one servo on a bench, a step response and a sine sweep,
+closing the only gate that's still failing.
 
 ---
 

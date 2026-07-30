@@ -1,0 +1,37 @@
+![A Soft Actor-Critic policy, trained from scratch, running HalfCheetah-v4 — a committed forward gait learned from a reward that only says "move forward."](/projects/cs285-halfcheetah-sac.gif)
+
+I worked through [Berkeley's CS 285](https://rail.eecs.berkeley.edu/deeprlcourse/) by rebuilding each algorithm family from the paper up instead of calling a library: behavior cloning and DAgger, REINFORCE with a learned baseline and GAE, DQN with target networks and double-Q, and Soft Actor-Critic with twin critics and automatic entropy tuning.
+
+Doing all four back to back is what made the actual lesson visible. Individually they read as four unrelated bags of tricks. Together they're four defenses against **the same** failure.
+
+## The one idea
+
+Every canonical trick in deep RL exists because **the quantity you're estimating lives on a distribution your own update is moving — and there's a maximizer in the loop that selects for your estimator's errors instead of averaging them away.**
+
+Trace it through:
+
+**Imitation.** Behavior cloning is supervised learning, so it should inherit supervised guarantees. It doesn't, because the moment the policy acts it authors its own input distribution, and errors compound over the horizon rather than staying independent. DAgger's fix isn't a better loss — it's re-collecting labels *on the distribution the policy actually induces*.
+
+**Policy gradients.** Here the estimator is unbiased and still nearly unusable, because on-policy Monte-Carlo returns have brutal variance. Reward-to-go, a learned baseline, and GAE are all control variates; GAE's λ is nothing but an explicit dial on the rate at which you buy variance reduction with bias.
+
+**Q-learning.** This is where it turns adversarial. The Bellman target takes `max_a Q(s,a)` over the *same* noisy estimates it's bootstrapping from — and by Jensen, the max of a noisy estimate is biased *upward* even when the noise is perfectly zero-mean. Estimation error stops being symmetric and starts systematically inflating. Target networks slow that feedback loop; double-Q decorrelates *choosing* the action from *valuing* it.
+
+**Actor-critic.** SAC makes the mechanism explicit: the actor is gradient ascent pointed straight at the critic. It is, quite literally, an optimizer searching for wherever the critic is most optimistically wrong — and then going there. Which reframes the whole problem:
+
+> You cannot out-train an error your own optimizer is actively hunting for. So you don't chase accuracy — you control the error's **sign**.
+
+That's what clipped double-Q is. Taking the min of twin critics doesn't make the value estimate *better*; it makes it *conservative*, so the actor's search finds pessimism instead of fantasy. And automatic entropy tuning isn't just "explore more" — it's a floor on policy support that stops the actor collapsing onto the critic's argmax in regions the critic has no data for.
+
+Three failure modes — shifted distribution, high variance, biased-upward selection — one root cause. Once I saw that, hyperparameters stopped feeling arbitrary. A target-network update rate isn't a magic number; it's how fast you're willing to let a feedback loop close.
+
+## The corollary: return curves under-determine behavior
+
+The other thing four implementations teach you is how little a rising reward curve actually proves. My HalfCheetah reaches ~4,200 evaluation return and does genuinely run — but that number alone couldn't have told me so. Return is a scalar summary of a behavior; enormously different behaviors project onto the same scalar, and the degenerate ones are usually *easier* to find.
+
+I learned this the expensive way on [my biped](/projects/bipedal-walker), where a policy with perfectly healthy training curves turned out, on reward-independent metrics, to be standing still and twitching rather than walking. Now I don't trust a curve until a physical metric — duty factor, realized velocity, something the reward never saw — agrees with it.
+
+*Honest caveat: these are course implementations, tuned to learn the environment rather than chase state-of-the-art numbers. Runs are single-seed; a rigorous comparison would sweep seeds and report confidence intervals.*
+
+---
+
+**Repo:** [uc_berkeley_CS-285](https://github.com/raoulbouri/uc_berkeley_CS-285)

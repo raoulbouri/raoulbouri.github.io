@@ -1,5 +1,5 @@
 // Work timeline. Projects are nested under each role to preserve the hierarchy
-// from the LaTeX resume. Metrics are verified; prose slots are TODO(Rahul).
+// from the LaTeX resume.
 
 export type Project = {
   title: string;

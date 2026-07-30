@@ -1,6 +1,5 @@
 // Featured-project metadata. Long-form case-study prose lives in
 // /content/projects/<slug>.mdx — edit that for narrative; edit this for facts.
-// Only verified facts from the repos are prefilled. Prose is TODO(Rahul).
 
 export type ProjectStatus = "complete" | "ongoing";
 
@@ -12,7 +11,7 @@ export type Project = {
   summary: string;
   tags: string[];
   repo: string;
-  // Path under /public. TODO(Rahul): drop the real cover asset in place.
+  // Path under /public.
   cover?: string;
   // Compact, verified result bullets for the card (no fabrication).
   highlights: string[];
@@ -36,41 +35,41 @@ export const projects: Project[] = [
       "AUC 0.99, detection SNR ~17×, faster than a classical momentum observer with perfect dynamics",
     ],
     featured: true,
-    order: 1,
-  },
-  {
-    slug: "franka-panda-sac",
-    title: "Hierarchical SAC for Pick-and-Place",
-    status: "complete",
-    summary:
-      "A two-tier RL controller for a Franka Panda in ROS + Gazebo — and an honest account of why symbolic Lagrangian priors broke and residual RL didn't.",
-    tags: ["Reinforcement Learning", "SAC", "ROS", "Gazebo", "PyTorch"],
-    repo: "https://github.com/raoulbouri/Franka_Panda_SAC_using_ROS_and_Gazebo",
-    // TODO(Rahul): add a real cover asset — falls back to the schematic placeholder until then.
-    highlights: [
-      "High-level SAC sequences Approach → Grasp → Transport → Place over low-level controllers",
-      "DeLaN / symbolic Lagrangian caused numerical instability → pivoted to residual RL",
-      "Gazebo contact fidelity forced heavy domain randomization; candid failure writeup",
-    ],
-    featured: true,
     order: 2,
   },
   {
-    slug: "bipedal-walker",
-    title: "Bipedal Walker — Sim-to-Real Pipeline",
-    status: "ongoing",
+    slug: "deep-rl-cs285",
+    title: "Deep RL from Scratch — Berkeley CS 285",
+    status: "complete",
     summary:
-      "An Onshape → URDF → MuJoCo pipeline for a 784g Jetson-class biped. The build system is done; the balance controller is what I'm building now.",
-    tags: ["MuJoCo", "Sim-to-Real", "URDF/MJCF", "Hardware", "In progress"],
-    repo: "https://github.com/raoulbouri/bipedal-walker",
-    // TODO(Rahul): add a real cover asset — falls back to the schematic placeholder until then.
+      "Rebuilding the core RL algorithm families from the paper up — imitation, policy gradients, DQN, and Soft Actor-Critic — and watching a HalfCheetah teach itself to run.",
+    tags: ["Reinforcement Learning", "SAC", "DQN", "Policy Gradients", "PyTorch"],
+    repo: "https://github.com/raoulbouri/uc_berkeley_CS-285",
+    cover: "/projects/cs285-halfcheetah-sac.gif",
     highlights: [
-      "Automated CAD→sim pipeline: Onshape URDF export → MJCF compile → RL-ready postprocess",
-      "784g biped, 6 actuated joints, 24 sensors, Jetson Orin Nano + ST3215 servos",
-      "Next up: balance / gait control (RL or classical) — currently the robot topples",
+      "Behavior cloning + DAgger, REINFORCE with GAE, DQN, and SAC — each built from scratch, not from a library",
+      "SAC learns a stable HalfCheetah gait (~4,200 eval return) from a reward that only says 'move forward'",
+      "DQN scales from CartPole to raw-pixel Atari; every run reproducible from a version-controlled YAML",
     ],
     featured: true,
     order: 3,
+  },
+  {
+    slug: "bipedal-walker",
+    title: "Self Design Bipedal Walker",
+    status: "ongoing",
+    summary:
+      "A 784 g Jetson-class biped, and the validation work that found the simulator was 3.3× too slow to stabilize it — because a missing back-EMF term had a control gain impersonating physics.",
+    tags: ["MuJoCo", "Digital Twin", "System ID", "MPC", "Hardware"],
+    repo: "https://github.com/raoulbouri/bipedal-walker",
+    cover: "/projects/biped-hardware.jpg",
+    highlights: [
+      "Cross-checking system ID against modal analysis exposed a missing back-EMF damping term (0.05 vs 0.624 N·m·s/rad)",
+      "Worst-case pose needs 1.86× the actuator bandwidth of the nominal stand pose — analyze the envelope, not one pose",
+      "An RL policy with healthy training curves failed physical gates: duty factor 1.00 means standing, not walking",
+    ],
+    featured: true,
+    order: 1,
   },
 ];
 
