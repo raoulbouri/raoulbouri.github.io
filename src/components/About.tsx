@@ -24,13 +24,16 @@ export function About() {
 
           <Reveal delay={0.05}>
             <span className="section-kicker" aria-hidden="true" />
-            <h2 className="section-heading">Moving intelligence from the cloud into the physical world.</h2>
+            <h2 className="section-heading">From production ML to Physical AI.</h2>
             <div className="mt-3 space-y-4 text-lg leading-relaxed text-muted">
               <p>
-                I&apos;ve engineered production AI systems across agentic search, multimodal AI, and large-scale ML infrastructure. What excites me now is approaching robotics with the curiosity of a researcher and the mindset of a production engineer.
+                I&apos;m pursuing a Master of Robotic Systems Development at <span className="text-ink">Carnegie Mellon</span>, focused on robot learning, foundation models, and scalable ML systems for Physical AI.
               </p>
               <p>
-                Through <span className="text-ink">Carnegie Mellon&apos;s MRSD program</span>, I&apos;m exploring world models, sim-to-real transfer, learning-based control, and robust deployment on real hardware.
+                Before CMU, I built and deployed LLM and agent systems at AlphaSense, and productionized ML at OLA Cabs: real-time ETA prediction for 100K+ daily orders, document OCR at 10K+ requests a day, and the data pipelines and monitoring that keep models honest in production.
+              </p>
+              <p>
+                Now I&apos;m bringing that engineering discipline to robots: end-to-end policies, simulation, sim-to-real transfer, and deployment on hardware I design and build myself.
               </p>
             </div>
 

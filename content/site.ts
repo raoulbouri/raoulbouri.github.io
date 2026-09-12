@@ -1,10 +1,9 @@
 // Central site metadata + navigation. Single source of truth for links.
-// NOTE(Rahul): VERIFY your live GitHub handle — resume shows `raoulbouri`.
 
 export const site = {
   name: "Rahul Bouri",
-  role: "ML Engineer → Robotics Researcher",
-  tagline: "Engineering intelligent systems for the physical world.",
+  role: "ML & Robotics Research Engineer",
+  tagline: "Robot learning, foundation models, and scalable ML systems for Physical AI.",
   // Split so the real address never appears verbatim in server-rendered HTML —
   // ObfuscatedEmail assembles the mailto: link client-side after hydration.
   emailUser: "rahulbouri16",
@@ -13,8 +12,8 @@ export const site = {
   location: "Pittsburgh, Pennsylvania",
   github: "https://github.com/raoulbouri",
   githubHandle: "raoulbouri",
-  linkedin: "https://www.linkedin.com/in/rahul-bouri/",
-  linkedinHandle: "rahul-bouri",
+  linkedin: "https://www.linkedin.com/in/raoulbouri/",
+  linkedinHandle: "raoulbouri",
   resume: "/rahul-bouri-cv.pdf",
   url: "https://raoulbouri.github.io",
 };

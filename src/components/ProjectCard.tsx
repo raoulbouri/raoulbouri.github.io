@@ -38,6 +38,9 @@ export function ProjectCard({ project }: { project: Project }) {
         <h3 className="text-lg font-semibold text-ink transition-colors group-hover:text-accent">
           {project.title}
         </h3>
+        {project.period ? (
+          <p className="mt-1 font-mono text-xs text-faint">{project.period}</p>
+        ) : null}
         <p className="mt-2 text-sm leading-relaxed text-muted">{project.summary}</p>
 
         <ul className="mt-4 space-y-1.5">

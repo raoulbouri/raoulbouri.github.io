@@ -7,13 +7,13 @@ export function Hero() {
       <div className="container-max">
         <div className="grid items-center gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:gap-4">
           <div className="animate-fade-up">
-            <p className="eyebrow mb-4"> Robotics Engineer | ML Researcher</p>
+            <p className="eyebrow mb-4">{site.role} · CMU MRSD</p>
             <h1 className="text-4xl font-semibold leading-[1.08] sm:text-5xl lg:text-6xl">
-              Building robotic systems that can <span className="text-accent">perceive, reason, and act</span> under real-world uncertainty.
+              Building the ML systems behind robots that <span className="text-accent">learn, adapt, and act</span> in the real world.
             </h1>
             <p className="mt-3 max-w-xl text-lg leading-relaxed text-muted">
-              {site.tagline} Two years shipping production AI at scale. Now at{" "}
-              <span className="text-ink">CMU&apos;s MS in Robotic Systems Development</span> exploring embodied intelligence through the lens of both research and systems engineering.
+              Two years shipping production ML and LLM systems at AlphaSense and OLA. Now at{" "}
+              <span className="text-ink">Carnegie Mellon</span>, working on robot learning, sim-to-real transfer, and hardware deployment for Physical AI.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <a href="#projects" className="btn-accent">

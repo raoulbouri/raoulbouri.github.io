@@ -10,6 +10,8 @@ export type Publication = {
   pages?: string;
   arxiv?: { id: string; category: string };
   url: string;
+  // One-line approach/result summary from the résumé.
+  note?: string;
 };
 
 export const publications: Publication[] = [
@@ -21,6 +23,7 @@ export const publications: Publication[] = [
     publisher: "Association for Computational Linguistics",
     pages: "2249–2255",
     url: "https://aclanthology.org/2025.semeval-1.292/",
+    note: "Multi-stage NL-to-SQL agent with query verification and iterative refinement — 70.5% on DataBench QA (Task 8) against a 26% baseline.",
   },
   {
     authors: "Bouri, Rahul et al.",
@@ -37,5 +40,6 @@ export const publications: Publication[] = [
     publisher: "Association for Computational Linguistics",
     pages: "2233–2239",
     url: "https://aclanthology.org/2025.semeval-1.290/",
+    note: "Recall-oriented BERT fine-tuning refined by GPT-4o, with ReAct retrieval prompting and taxonomy grounding to curb hallucinated justifications (Task 10).",
   },
 ];

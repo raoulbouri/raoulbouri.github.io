@@ -7,6 +7,8 @@ export type Project = {
   slug: string;
   title: string;
   status: ProjectStatus;
+  // Shown on the card when known, e.g. "May 2026 — Jun 2026".
+  period?: string;
   // One-line "what + the non-obvious decision", shown on the card.
   summary: string;
   tags: string[];
@@ -22,8 +24,9 @@ export type Project = {
 export const projects: Project[] = [
   {
     slug: "proprioceptive-contact-detection",
-    title: "Proprioceptive Contact Detection",
+    title: "Proprioceptive Contact Estimation",
     status: "complete",
+    period: "May 2026 — Jun 2026",
     summary:
       "Estimating external contact torque on a robot arm from joint encoders alone — by admitting the dynamics model is wrong and letting a Kalman filter turn that disagreement into signal.",
     tags: ["EKF", "Residual Learning", "MuJoCo", "Estimation", "Python"],
@@ -56,8 +59,9 @@ export const projects: Project[] = [
   },
   {
     slug: "bipedal-walker",
-    title: "Self Design Bipedal Walker",
+    title: "Self-Designed Bipedal Walker",
     status: "ongoing",
+    period: "Jul 2026 — Present",
     summary:
       "A 784 g Jetson-class biped, and the validation work that found the simulator was 3.3× too slow to stabilize it — because a missing back-EMF term had a control gain impersonating physics.",
     tags: ["MuJoCo", "Digital Twin", "System ID", "MPC", "Hardware"],

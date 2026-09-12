@@ -14,15 +14,26 @@ export function Research() {
               <span className="section-kicker" aria-hidden="true" />
               <p className="eyebrow mb-3">Research Direction</p>
               <h2 className="section-heading">
-                Toward robots that estimate, learn, and act under uncertainty.
+                Robot learning that holds up outside the simulator.
               </h2>
             </Reveal>
             <Reveal delay={0.05}>
               <div className="mt-3 space-y-4 text-lg leading-relaxed text-muted">
                 <p>
-                  My interests sit at the seam between classical estimation and learning: using
-                  filtering to make learned models honest about what they don&apos;t know, and using
-                  learning to cover what first-principles models miss.
+                  I&apos;m interested in the full loop from data to deployment: how training data,
+                  simulation fidelity, and model design decide whether a policy survives contact with
+                  real hardware.
+                </p>
+                <p>
+                  My projects keep returning to one question: <span className="text-ink">when should you trust the model?</span>{" "}
+                  In contact estimation, a Kalman filter turns a learned model&apos;s errors into a usable
+                  force signal. On my bipedal walker, validating the digital twin exposed a missing
+                  physical term before any controller was built. In deep RL, healthy reward curves hid
+                  policies that weren&apos;t actually walking.
+                </p>
+                <p>
+                  Next: end-to-end policies, foundation models for robotics, and the training and
+                  evaluation infrastructure that makes them reliable.
                 </p>
               </div>
             </Reveal>
@@ -92,6 +103,7 @@ export function Research() {
                     {pub.url}
                   </a>
                   .
+                  {pub.note ? <span className="mt-1 block text-ink/80">{pub.note}</span> : null}
                 </li>
               ))}
             </ul>

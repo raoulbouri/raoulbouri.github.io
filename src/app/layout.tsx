@@ -28,11 +28,14 @@ export const metadata: Metadata = {
   keywords: [
     "Rahul Bouri",
     "robotics",
-    "machine learning engineer",
+    "ML research engineer",
+    "robot learning",
+    "Physical AI",
+    "sim-to-real",
     "reinforcement learning",
     "state estimation",
     "MuJoCo",
-    "ROS",
+    "ROS2",
   ],
   openGraph: {
     type: "website",
