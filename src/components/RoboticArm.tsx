@@ -31,7 +31,7 @@ export function RoboticArm() {
         Franka Panda · real kinematics
         <br className="sm:hidden" />
         <span className="hidden sm:inline"> — </span>
-        click the workspace to grasp
+        tap or click the workspace to grasp
       </p>
     </div>
   );

@@ -3,7 +3,9 @@ import { site } from "@content/site";
 
 export function Hero() {
   return (
-    <section id="home" className="scroll-mt-20 pt-14 sm:pt-16">
+    // Top padding clears the 64px fixed header; bottom padding matches .section
+    // so the Hero → About gap equals every other section gap.
+    <section id="home" className="scroll-mt-20 pb-7 pt-20 sm:pb-10 sm:pt-24">
       <div className="container-max">
         <div className="grid items-center gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:gap-4">
           <div className="animate-fade-up">

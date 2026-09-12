@@ -77,8 +77,21 @@
   .container-max {
     @apply mx-auto w-full max-w-content px-6 sm:px-8;
   }
+  /* Spacing scale — every section uses these, nothing ad hoc:
+       between sections   56px mobile / 80px desktop (2 × section padding)
+       header → content   24px mobile / 32px desktop (.section-body)
+       between subsections 40px mobile / 48px desktop (.subsection) */
   .section {
-    @apply scroll-mt-20 py-10 sm:py-14;
+    @apply scroll-mt-20 py-7 sm:py-10;
+  }
+  .section-body {
+    @apply mt-6 sm:mt-8;
+  }
+  .subsection {
+    @apply mt-10 border-t border-border pt-8 sm:mt-12 sm:pt-10;
+  }
+  .subsection-heading {
+    @apply text-xl font-semibold leading-tight text-ink sm:text-2xl;
   }
   .eyebrow {
     @apply font-mono text-xs uppercase tracking-[0.18em] text-accent;
@@ -87,13 +100,13 @@
     @apply text-2xl font-semibold leading-[1.2] text-ink sm:text-3xl lg:text-4xl;
   }
   .section-kicker {
-    @apply mb-4 block h-[3px] w-10 rounded-full bg-accent;
+    @apply mb-3 block h-[3px] w-10 rounded-full bg-accent;
   }
   .link-underline {
     @apply text-ink underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent;
   }
   .chip {
-    @apply inline-flex items-center rounded-full border border-border bg-surface-2 px-2.5 py-0.5 font-mono text-[0.7rem] text-muted;
+    @apply inline-flex items-center rounded-full border border-border bg-surface-2 px-2.5 py-0.5 font-mono text-xs text-muted;
   }
   .card {
     @apply rounded-xl border border-border bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift hover:border-accent/40;

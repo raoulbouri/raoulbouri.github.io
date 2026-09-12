@@ -1,4 +1,5 @@
 import { Reveal } from "./Reveal";
+import { SectionHeader } from "./SectionHeader";
 import { experience } from "@content/experience";
 
 export function Experience() {
@@ -6,11 +7,10 @@ export function Experience() {
     <section id="experience" className="section">
       <div className="container-max">
         <Reveal>
-          <span className="section-kicker" aria-hidden="true" />
-          <h2 className="section-heading">Experience</h2>
+          <SectionHeader eyebrow="Experience" title="Work Experience" />
         </Reveal>
 
-        <div className="relative mt-5">
+        <div className="section-body relative">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-bg to-transparent"
             aria-hidden="true"

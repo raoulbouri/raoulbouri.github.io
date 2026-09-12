@@ -43,6 +43,15 @@ type Palette = {
 const UP = new Vector3(0, 1, 0);
 const BLOCK = 0.05;
 const TABLE_Z = 0.0;
+const REST_TARGET = new Vector3(0.45, 0, 0.45);
+
+// Camera framing. The base offset was tuned for a wide canvas; narrower canvases
+// (phones) get pulled back proportionally so the sweeping gripper and the
+// workspace disc stay inside the frame.
+const LOOK_AT = new Vector3(0, 0, 0.34);
+const CAMERA_OFFSET = new Vector3(1.35, -1.15, 0.85).sub(new Vector3(0, 0, 0.42));
+const WIDE_ASPECT = 1.35;
+const MAX_PULLBACK = 1.6;
 
 /** Orients a unit-height cylinder (+Y) to span from `a` to `b`. */
 function spanTo(obj: Object3D, a: Vector3, b: Vector3, scratch: Vector3, q: Quaternion) {
@@ -60,7 +69,7 @@ function spanTo(obj: Object3D, a: Vector3, b: Vector3, scratch: Vector3, q: Quat
   obj.scale.set(1, len, 1);
 }
 
-function Arm({ palette }: { palette: Palette }) {
+function Arm({ palette, reduced }: { palette: Palette; reduced: boolean }) {
   const linkRefs = useRef<(Mesh | null)[]>([]);
   const jointRefs = useRef<(Mesh | null)[]>([]);
   const handRef = useRef<Group>(null);
@@ -72,8 +81,8 @@ function Arm({ palette }: { palette: Palette }) {
   // Mutable sim state (kept out of React state to avoid per-frame re-renders).
   const sim = useRef({
     q: HOME_POSE.slice(),
-    target: new Vector3(0.45, 0, 0.45),
-    goal: new Vector3(0.45, 0, 0.45),
+    target: REST_TARGET.clone(),
+    goal: REST_TARGET.clone(),
     block: new Vector3(0.45, 0, TABLE_Z + BLOCK / 2),
     blockVisible: false,
     blockHeld: false,
@@ -112,14 +121,20 @@ function Arm({ palette }: { palette: Palette }) {
 
     // ---- goal selection per phase -------------------------------------
     if (!s.hasTask) {
-      // Ambient: sweep slowly across the workspace so it reads as "alive"
-      // without demanding attention.
-      const t = performance.now() / 1000;
-      s.goal.set(
-        0.42 + Math.sin(t * 0.31) * 0.12,
-        Math.sin(t * 0.23) * 0.34,
-        0.38 + Math.sin(t * 0.19 + 1.1) * 0.14
-      );
+      if (reduced) {
+        // Reduced motion: hold still until the visitor asks for a grasp. The
+        // user-initiated task below still animates, so the demo stays usable.
+        s.goal.copy(REST_TARGET);
+      } else {
+        // Ambient: sweep slowly across the workspace so it reads as "alive"
+        // without demanding attention.
+        const t = performance.now() / 1000;
+        s.goal.set(
+          0.42 + Math.sin(t * 0.31) * 0.12,
+          Math.sin(t * 0.23) * 0.34,
+          0.38 + Math.sin(t * 0.19 + 1.1) * 0.14
+        );
+      }
     } else if (s.phase === "reach") {
       s.goal.set(s.block.x, s.block.y, s.block.z + 0.005);
       if (scratch.subVectors(s.goal, currentTool(s.q, scratch2)).length() < 0.035) {
@@ -266,8 +281,17 @@ function Workspace({ palette }: { palette: Palette }) {
     const p = e.point;
     // e.point is world-space; the robot group is rotated, so convert back.
     const local = e.object.worldToLocal(p.clone());
-    const r = Math.hypot(local.x, local.y);
-    if (r < MIN_REACH || r > MAX_REACH) return;
+    let r = Math.hypot(local.x, local.y);
+    if (r > MAX_REACH) return;
+    // Taps inside the dead zone around the base used to be silently ignored,
+    // which on a small phone canvas reads as "broken". Push them out to the
+    // nearest reachable radius instead.
+    if (r < MIN_REACH * 1.1) {
+      const scale = r < 1e-4 ? 0 : (MIN_REACH * 1.1) / r;
+      local.x = r < 1e-4 ? MIN_REACH * 1.1 : local.x * scale;
+      local.y = r < 1e-4 ? 0 : local.y * scale;
+      r = MIN_REACH * 1.1;
+    }
     window.dispatchEvent(
       new CustomEvent("panda:task", { detail: { x: local.x, y: local.y, z: 0 } })
     );
@@ -284,7 +308,7 @@ function Workspace({ palette }: { palette: Palette }) {
         <ringGeometry args={[MAX_REACH - 0.012, MAX_REACH, 64]} />
         <meshBasicMaterial color={palette.accent} transparent opacity={0.85} />
       </mesh>
-      {/* Inner dead-zone boundary — clicks closer than this are ignored. */}
+      {/* Inner dead-zone boundary — taps inside are pushed out to this radius. */}
       <mesh position={[0, 0, TABLE_Z + 0.002]}>
         <ringGeometry args={[MIN_REACH - 0.006, MIN_REACH, 48]} />
         <meshBasicMaterial color={palette.accent} transparent opacity={0.4} />
@@ -303,14 +327,17 @@ function Workspace({ palette }: { palette: Palette }) {
   );
 }
 
-/** Aim the camera at the arm's mid-height rather than the base origin. */
+/** Frame the arm for the canvas's current aspect ratio. */
 function CameraRig() {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   useEffect(() => {
+    const aspect = size.width / Math.max(size.height, 1);
+    const pullback = Math.min(MAX_PULLBACK, Math.max(1.1, WIDE_ASPECT / aspect));
     camera.up.set(0, 0, 1);
-    camera.lookAt(0, 0, 0.42);
+    camera.position.copy(LOOK_AT).addScaledVector(CAMERA_OFFSET, pullback);
+    camera.lookAt(LOOK_AT);
     camera.updateProjectionMatrix();
-  }, [camera]);
+  }, [camera, size.width, size.height]);
   return null;
 }
 
@@ -335,33 +362,54 @@ function readPalette(): Palette {
 export default function PandaScene() {
   const [palette, setPalette] = useState<Palette>(() => readPalette());
   const [reduced, setReduced] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setPalette(readPalette());
-    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const onMq = () => setReduced(mq.matches);
+    mq.addEventListener("change", onMq);
     const mo = new MutationObserver(() => setPalette(readPalette()));
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => mo.disconnect();
+    return () => {
+      mq.removeEventListener("change", onMq);
+      mo.disconnect();
+    };
+  }, []);
+
+  // Stop rendering while scrolled off-screen — saves battery on phones.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
   return (
-    <Canvas
-      dpr={[1, 1.75]}
-      frameloop={reduced ? "demand" : "always"}
-      camera={{ position: [1.35, -1.15, 0.85], fov: 38, up: [0, 0, 1] }}
-      gl={{ antialias: true, alpha: true }}
-      // pan-y (not "none"): the only interaction is a tap-to-grasp, so a
-      // vertical swipe that starts over the canvas must still scroll the page.
-      style={{ touchAction: "pan-y" }}
-    >
-      <CameraRig />
-      <ambientLight intensity={0.75} />
-      <directionalLight position={[2, -2, 3]} intensity={1.5} />
-      <directionalLight position={[-2, 1.5, 1]} intensity={0.35} />
-      <group>
-        <Workspace palette={palette} />
-        <Arm palette={palette} />
-      </group>
-    </Canvas>
+    <div ref={wrapRef} className="h-full w-full">
+      <Canvas
+        dpr={[1, 1.75]}
+        // Always render while visible, even under reduced motion: the ambient
+        // sweep is disabled in <Arm>, but a tap must still animate the grasp.
+        frameloop={visible ? "always" : "never"}
+        camera={{ position: [1.35, -1.15, 0.85], fov: 38, up: [0, 0, 1] }}
+        gl={{ antialias: true, alpha: true }}
+        // pan-y (not "none"): the only interaction is a tap-to-grasp, so a
+        // vertical swipe that starts over the canvas must still scroll the page.
+        style={{ touchAction: "pan-y" }}
+      >
+        <CameraRig />
+        <ambientLight intensity={0.75} />
+        <directionalLight position={[2, -2, 3]} intensity={1.5} />
+        <directionalLight position={[-2, 1.5, 1]} intensity={0.35} />
+        <group>
+          <Workspace palette={palette} />
+          <Arm palette={palette} reduced={reduced} />
+        </group>
+      </Canvas>
+    </div>
   );
 }

@@ -1,21 +1,27 @@
 import Image from "next/image";
 import { Reveal } from "./Reveal";
+import { SectionHeader } from "./SectionHeader";
 import { education } from "@content/experience";
 
 export function About() {
   return (
     <section id="about" className="section">
       <div className="container-max">
-        <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+        <Reveal>
+          <SectionHeader eyebrow="About" title="From production ML to Physical AI." />
+        </Reveal>
+
+        <div className="section-body grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:gap-8">
           <Reveal>
-            <p className="eyebrow mb-3">About</p>
             <div className="overflow-hidden rounded-2xl border border-border bg-surface-2">
+              {/* Cropped landscape on small screens so the photo doesn't push the
+                  copy a full screen down; square alongside the text on desktop. */}
               <Image
                 src="/images/about-photo.jpg"
                 alt="Rahul Bouri"
                 width={1200}
                 height={1200}
-                className="h-auto w-full object-cover"
+                className="aspect-[4/3] h-auto w-full object-cover object-[50%_45%] sm:aspect-[16/10] lg:aspect-square"
                 sizes="(min-width: 1024px) 33vw, 90vw"
                 priority={false}
               />
@@ -23,9 +29,7 @@ export function About() {
           </Reveal>
 
           <Reveal delay={0.05}>
-            <span className="section-kicker" aria-hidden="true" />
-            <h2 className="section-heading">From production ML to Physical AI.</h2>
-            <div className="mt-3 space-y-4 text-lg leading-relaxed text-muted">
+            <div className="space-y-4 text-base leading-relaxed text-muted sm:text-lg">
               <p>
                 I&apos;m pursuing a Master of Robotic Systems Development at <span className="text-ink">Carnegie Mellon</span>, focused on robot learning, foundation models, and scalable ML systems for Physical AI.
               </p>
@@ -37,7 +41,7 @@ export function About() {
               </p>
             </div>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
               {education.map((e) => (
                 <div key={e.school} className="rounded-xl border border-border bg-surface p-5">
                   <p className="font-mono text-xs text-accent">{e.period}</p>
