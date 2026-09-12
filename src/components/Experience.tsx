@@ -16,8 +16,11 @@ export function Experience() {
             aria-hidden="true"
           />
           <ol className="experience-scroll max-h-[65vh] overflow-y-auto overscroll-y-contain pb-3 pr-2 pt-5">
-            {experience.map((role, i) => (
-              <Reveal as="li" key={`${role.company}-${role.period}`} delay={i * 0.05}>
+            {/* Plain <li>, not <Reveal>: fade-ins inside their own scroll box stay
+                hidden when a fast flick skips past them. The gradients above and
+                below already soften the edges. */}
+            {experience.map((role) => (
+              <li key={`${role.company}-${role.period}`}>
                 <div className="grid grid-cols-[4.5rem_1fr] gap-x-3 sm:grid-cols-[6rem_1fr] sm:gap-x-4">
                   <div className="pt-1 text-right font-mono text-[0.65rem] leading-tight text-faint sm:text-xs">
                     {role.period.split(" — ").map((part) => (
@@ -55,7 +58,7 @@ export function Experience() {
                     </div>
                   </div>
                 </div>
-              </Reveal>
+              </li>
             ))}
           </ol>
           <div
