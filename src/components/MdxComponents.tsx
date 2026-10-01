@@ -23,8 +23,12 @@ function Clip({
       {src.endsWith(".mp4") ? (
         <LoopVideo src={src} poster={src.replace(/\.mp4$/, ".jpg")} label={alt} className={media} />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt} loading="lazy" className={media} />
+        // Figures link to the full-size image: training plots have small axis
+        // labels that are hard to read at column width, especially on phones.
+        <a href={src} target="_blank" rel="noreferrer" title="Open full-size figure">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={alt} loading="lazy" className={`${media} bg-white`} />
+        </a>
       )}
       {caption ? (
         <figcaption className="mt-2 text-center text-sm text-faint">{caption}</figcaption>
@@ -43,6 +47,16 @@ function Specs({ title = "Under the hood", children }: { title?: string; childre
         {children}
       </dl>
     </div>
+  );
+}
+
+// Small tag under a heading naming where a section's evidence comes from,
+// e.g. <Course>CMU 16-831 · HW1</Course>.
+function Course({ children }: { children: ReactNode }) {
+  return (
+    <p className="mt-2">
+      <span className="chip border-accent/50 text-accent">{children}</span>
+    </p>
   );
 }
 
@@ -103,4 +117,5 @@ export const mdxComponents = {
   Clip,
   Specs,
   Spec,
+  Course,
 };

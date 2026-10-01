@@ -1,37 +1,113 @@
 ![A Soft Actor-Critic policy, trained from scratch, running HalfCheetah-v4 — a committed forward gait learned from a reward that only says "move forward."](/projects/cs285-halfcheetah-sac.gif)
 
-I worked through [Berkeley's CS 285](https://rail.eecs.berkeley.edu/deeprlcourse/) by rebuilding each algorithm family from the paper up instead of calling a library: behavior cloning and DAgger, REINFORCE with a learned baseline and GAE, DQN with target networks and double-Q, and Soft Actor-Critic with twin critics and automatic entropy tuning.
+Two courses, one toolkit. I first worked through [Berkeley's CS 285](https://rail.eecs.berkeley.edu/deeprlcourse/) on my own, rebuilding each algorithm family from the paper up: behavior cloning and DAgger, REINFORCE with baselines and GAE, DQN, and Soft Actor-Critic. At CMU, **16-831 Introduction to Robot Learning** turned the same families into graded experiments — hyperparameter searches, ablations and written analysis — and asked how each method shows up in real robotics papers.
 
-Doing all four back to back is what made the actual lesson visible. Individually they read as four unrelated bags of tricks. Together they're four defenses against **the same** failure.
+Rather than list the work course by course, this page follows the one idea that connects it.
 
 ## The one idea
 
-Every canonical trick in deep RL exists because **the quantity you're estimating lives on a distribution your own update is moving — and there's a maximizer in the loop that selects for your estimator's errors instead of averaging them away.**
+Every canonical trick in deep RL exists because **the quantity you're estimating lives on a distribution your own update is moving — and, once a maximizer is in the loop, your errors stop averaging out and start getting selected for.**
 
-Trace it through:
+That shows up as three failure modes — a **shifted data distribution**, **high-variance gradients**, and **optimistically biased value estimates** — and each section below takes one of them, with the training curves that show it.
 
-**Imitation.** Behavior cloning is supervised learning, so it should inherit supervised guarantees. It doesn't, because the moment the policy acts it authors its own input distribution, and errors compound over the horizon rather than staying independent. DAgger's fix isn't a better loss — it's re-collecting labels *on the distribution the policy actually induces*.
+## 1 — Distribution shift: imitation learning
 
-**Policy gradients.** Here the estimator is unbiased and still nearly unusable, because on-policy Monte-Carlo returns have brutal variance. Reward-to-go, a learned baseline, and GAE are all control variates; GAE's λ is nothing but an explicit dial on the rate at which you buy variance reduction with bias.
+<Course>CMU 16-831 · HW1 (also CS 285 HW1)</Course>
 
-**Q-learning.** This is where it turns adversarial. The Bellman target takes `max_a Q(s,a)` over the *same* noisy estimates it's bootstrapping from — and by Jensen, the max of a noisy estimate is biased *upward* even when the noise is perfectly zero-mean. Estimation error stops being symmetric and starts systematically inflating. Target networks slow that feedback loop; double-Q decorrelates *choosing* the action from *valuing* it.
+Behavior cloning is supervised learning, so it should inherit supervised guarantees. It doesn't: the moment the policy acts, it creates its own input distribution, and small errors compound over the horizon. **DAgger** fixes this by re-collecting expert labels on the states the policy actually visits.
 
-**Actor-critic.** SAC makes the mechanism explicit: the actor is gradient ascent pointed straight at the critic. It is, quite literally, an optimizer searching for wherever the critic is most optimistically wrong — and then going there. Which reframes the whole problem:
+<Clip
+  src="/projects/rl/dagger-ant-humanoid.png"
+  alt="DAgger learning curves on Ant and Humanoid, with expert and behavior-cloning reference lines."
+  caption="DAgger, 10 iterations. Ant climbs from 3,502 to 4,766 — matching the 4,752 expert and well above plain BC (3,316). Humanoid barely moves (305 → 366 against a 9,639 expert)."
+/>
 
-> You cannot out-train an error your own optimizer is actively hunting for. So you don't chase accuracy — you control the error's **sign**.
+The Humanoid result was the interesting one. If distribution shift were the problem, DAgger should have helped. A sweep over network depth and width pointed somewhere else:
 
-That's what clipped double-Q is. Taking the min of twin critics doesn't make the value estimate *better*; it makes it *conservative*, so the actor's search finds pessimism instead of fantasy. And automatic entropy tuning isn't just "explore more" — it's a floor on policy support that stops the actor collapsing onto the critic's argmax in regions the critic has no data for.
+<Clip
+  src="/projects/rl/bc-capacity-sweep.png"
+  alt="Behavior-cloning return on Humanoid for 20 network depth and width combinations."
+  caption="BC on Humanoid across 20 architectures (2–8 layers × 16–256 units). With only 2 expert demonstrations, bigger networks did worse: best 8×16 (398), worst 8×64 (193). The bottleneck was data, not drift."
+/>
 
-Three failure modes — shifted distribution, high variance, biased-upward selection — one root cause. Once I saw that, hyperparameters stopped feeling arbitrary. A target-network update rate isn't a magic number; it's how fast you're willing to let a feedback loop close.
+<Specs>
+  <Spec k="Expert data">2 demonstrations per task (~2,000 transitions)</Spec>
+  <Spec k="Policy">4-layer, 64-unit MLP for both tasks, so BC and DAgger are compared on equal terms</Spec>
+  <Spec k="DAgger loop">10 iterations · 1,000 newly labelled transitions and 2,000 gradient steps per iteration</Spec>
+  <Spec k="Evaluation">Mean ± std over 20 rollouts of up to 1,000 steps</Spec>
+</Specs>
+
+> **Paper — ACT (Zhao et al., *Learning Fine-Grained Bimanual Manipulation with Low-Cost Hardware*, RSS 2023).** ACT clones bimanual manipulation skills — opening containers, inserting batteries — from human demonstrations collected with the ALOHA teleoperation rig. It attacks the same compounding-error problem from the model side: predicting a short **chunk** of future actions at once keeps motion consistent, and re-planning every step with **temporal ensembling** lets the robot correct small mistakes instead of committing to a bad plan.
+
+## 2 — Variance: policy gradients
+
+<Course>CMU 16-831 · HW2 (also CS 285 HW2)</Course>
+
+Here the gradient estimator is unbiased and still nearly unusable, because on-policy Monte-Carlo returns are extremely noisy. **Reward-to-go**, a **learned baseline** and **GAE** are all ways of cutting that noise; GAE's λ is an explicit dial trading variance for bias.
+
+<Clip src="/projects/rl/cs285-pg.png" alt="CS 285 policy-gradient learning curves on CartPole and HalfCheetah." caption="Where it starts (CS 285, my own implementation): vanilla REINFORCE on CartPole oscillates between about 25 and 100 and never solves the task; HalfCheetah with a learned baseline climbs steadily from about −780 to 656 eval return." />
+
+**CartPole — reward-to-go.** Crediting each action only with rewards that come after it reached the maximum return of 200 at iteration 14, versus 37 for the full-trajectory return (batch 1,500). Larger batches and advantage standardization mainly bought stability.
+
+<Clip src="/projects/rl/pg-cartpole-small-batch.png" alt="CartPole policy-gradient learning curves, batch size 1,500." caption="CartPole, batch 1,500: full-trajectory return vs reward-to-go, with and without advantage standardization." />
+
+<Clip src="/projects/rl/pg-cartpole-large-batch.png" alt="CartPole policy-gradient learning curves, batch size 6,000." caption="CartPole, batch 6,000: the same estimators with 4× the samples per update." />
+
+**InvertedPendulum — fewer iterations is not fewer samples.** A 25-run search over batch size and learning rate looked for the smallest batch and largest step that still reach the maximum return of 1,000. Batch 2,000 at lr 0.03 got there in 21 iterations; batch 300 took 91 — yet the small batch used *fewer* environment steps (34.3k vs 46.0k).
+
+<Clip src="/projects/rl/pg-invpendulum-b2000.png" alt="InvertedPendulum learning curve, batch 2,000, learning rate 0.03." caption="InvertedPendulum, batch 2,000, lr 0.03: reaches 1,000 at iteration 21, but oscillates." />
+
+<Clip src="/projects/rl/pg-invpendulum-b300.png" alt="InvertedPendulum learning curve, batch 300, learning rate 0.01." caption="InvertedPendulum, batch 300, lr 0.01: slow and noisy, first reaches 1,000 at iteration 91 — on fewer total samples." />
+
+**LunarLander — what a single large step can do.** The policy passed the 120 target by iteration 41 and held around 140–160, then collapsed to about −70 after iteration 140 and recovered to about 150. A fixed learning rate with one big step per batch can push the policy into a bad region that on-policy data then has to climb back out of.
+
+<Clip src="/projects/rl/pg-lunarlander.png" alt="LunarLander policy-gradient learning curve over 250 iterations." caption="LunarLanderContinuous, batch 10,000: target met, then a collapse-and-recovery cycle typical of vanilla policy gradients." />
+
+**HalfCheetah — which variance reduction actually matters.** A 9-run batch × learning-rate search chose batch 50,000 at lr 0.02, then a 4-run ablation separated the two tricks. Reward-to-go did almost all the work (144.7 average return vs 35.4 without). A learned baseline *on its own* made things worse (2.9): without reward-to-go it has to predict a whole-trajectory return that the current state can't explain, so subtracting it adds error instead of removing variance.
+
+<Clip src="/projects/rl/pg-halfcheetah-search.png" alt="HalfCheetah eval return for 9 batch-size and learning-rate combinations." caption="HalfCheetah search: learning rate was the larger effect; larger batches mattered most at higher learning rates." />
+
+<Clip src="/projects/rl/pg-halfcheetah-ablation.png" alt="HalfCheetah ablation of reward-to-go and a learned baseline." caption="HalfCheetah ablation at batch 50,000, lr 0.02: plain, reward-to-go, baseline, and both." />
+
+**Hopper — choosing GAE's λ.** λ = 0 (a one-step TD advantage) never got past about 220: low variance, but the learned value function is inaccurate early on, and that bias steers every update wrong. λ = 0.99 was best at 528.1, with λ = 1 at 438.2 and λ = 0.95 at 377.8.
+
+<Clip src="/projects/rl/pg-hopper-gae.png" alt="Hopper learning curves for GAE lambda 0, 0.95, 0.99 and 1." caption="Hopper with 0.5 action noise: λ = 0 oscillates on a biased value estimate; λ near 1 keeps learning." />
+
+<Specs>
+  <Spec k="Runs">50 policy-gradient runs across five environments, single seed each</Spec>
+  <Spec k="Policy">2-layer MLP (64 units; 32 for HalfCheetah and Hopper), advantages standardized unless ablated</Spec>
+  <Spec k="Searches">InvertedPendulum 5 batch × 5 lr · HalfCheetah 3 × 3, then a 4-way reward-to-go/baseline ablation</Spec>
+  <Spec k="GAE check">Unit tests confirm λ = 1 equals reward-to-go minus V(s) and λ = 0 equals the one-step TD error</Spec>
+</Specs>
+
+> **Paper — HORA (Qi et al., *In-Hand Object Rotation via Rapid Motor Adaptation*, CoRL 2022).** A multi-fingered robot hand learns to rotate objects about one axis. Its base policy is trained in simulation with PPO from proprioception plus an embedding of the object's properties — using exactly the tools above: a **value-function baseline** and **GAE** (γ = 0.99, λ = 0.95) to compute the advantage for each policy update.
+
+## 3 — Optimistic estimates: DQN and actor-critic
+
+<Course>CS 285 · HW3</Course>
+
+This is where estimation error turns adversarial. The Bellman target takes the max over the *same* noisy Q-estimates it bootstraps from, and the max of a noisy estimate is biased **upward** even when the noise averages to zero. Target networks slow that feedback loop; double-Q separates *choosing* an action from *valuing* it.
+
+<Clip src="/projects/rl/cs285-dqn-cartpole.png" alt="DQN learning curve and mean predicted Q-value on CartPole." caption="DQN on CartPole (target network + double-Q): evaluation return peaked at 409 and then settled back near 100 — value-based learning can be unstable even on a toy task. Single seed." />
+
+**SAC** makes the mechanism explicit: the actor is gradient ascent pointed straight at the critic, so it searches for wherever the critic is most optimistically wrong. You cannot out-train an error your own optimizer is hunting for — so you control its **sign**. Taking the minimum of two critics makes the estimate *conservative*, and automatic entropy tuning keeps the policy from collapsing onto the critic's argmax in regions it has no data for.
+
+<Clip src="/projects/rl/cs285-sac.png" alt="SAC learning curves on HalfCheetah and InvertedPendulum, and the auto-tuned entropy temperature." caption="SAC from scratch: HalfCheetah eval return from −223 to 4,189. The auto-tuned temperature α falls from 0.1 to about 3×10⁻⁶ while return is flat, then rebounds to about 10⁻⁴ just as the gait takes off near 130k steps. A short InvertedPendulum run alongside." />
+
+<Specs>
+  <Spec k="DQN">Target network + double-Q targets, ε-greedy exploration; also scaled to raw-pixel Atari (MsPacman)</Spec>
+  <Spec k="SAC">Twin (clipped double-Q) critics, squashed-Gaussian policy, automatic entropy-temperature tuning</Spec>
+  <Spec k="Reproducibility">Every run launched from a version-controlled YAML config</Spec>
+</Specs>
 
 ## The corollary: return curves under-determine behavior
 
-The other thing four implementations teach you is how little a rising reward curve actually proves. My HalfCheetah reaches ~4,200 evaluation return and does genuinely run — but that number alone couldn't have told me so. Return is a scalar summary of a behavior; enormously different behaviors project onto the same scalar, and the degenerate ones are usually *easier* to find.
+A rising reward curve proves less than it looks. My HalfCheetah reaches ~4,200 evaluation return and does genuinely run — but that number alone couldn't have told me so. Very different behaviors map to the same scalar, and the degenerate ones are usually *easier* to find.
 
-I learned this the expensive way on [my biped](/projects/bipedal-walker), where a policy with perfectly healthy training curves turned out, on reward-independent metrics, to be standing still and twitching rather than walking. Now I don't trust a curve until a physical metric — duty factor, realized velocity, something the reward never saw — agrees with it.
+I learned this the expensive way on [my biped](/projects/bipedal-walker), where a policy with healthy training curves turned out, on reward-independent metrics, to be standing still. Now I don't trust a curve until a physical metric the reward never saw agrees with it.
 
-*Honest caveat: these are course implementations, tuned to learn the environment rather than chase state-of-the-art numbers. Runs are single-seed; a rigorous comparison would sweep seeds and report confidence intervals.*
+*Honest caveat: these are course implementations on single seeds; the 16-831 work follows the handout's settings and budgets, and a rigorous comparison would sweep seeds and report confidence intervals.*
 
 ---
 
-**Repo:** [uc_berkeley_CS-285](https://github.com/raoulbouri/uc_berkeley_CS-285)
+**Code:** CS 285 — [uc_berkeley_CS-285](https://github.com/raoulbouri/uc_berkeley_CS-285). CMU 16-831 — private under course policy, built on the course's starter code; happy to walk through it on request.
