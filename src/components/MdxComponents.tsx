@@ -1,4 +1,30 @@
 import type { ComponentProps } from "react";
+import { YouTube } from "./YouTube";
+
+// Looping hardware clip (GIF) with a caption, for case studies. `vertical`
+// caps portrait (phone-shot) clips at their native width instead of
+// stretching them across the column.
+function Clip({
+  src,
+  alt,
+  caption,
+  vertical = false,
+}: {
+  src: string;
+  alt: string;
+  caption?: string;
+  vertical?: boolean;
+}) {
+  return (
+    <figure className={`mt-6 ${vertical ? "mx-auto w-full max-w-[300px]" : ""}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} loading="lazy" className="w-full rounded-lg border border-border" />
+      {caption ? (
+        <figcaption className="mt-2 text-center text-sm text-faint">{caption}</figcaption>
+      ) : null}
+    </figure>
+  );
+}
 
 // Styling for MDX case-study prose without the typography plugin, so authors
 // write plain Markdown in the .mdx files and it renders on-brand.
@@ -44,4 +70,6 @@ export const mdxComponents = {
     // eslint-disable-next-line @next/next/no-img-element
     <img className="mt-6 w-full rounded-lg border border-border" alt={props.alt ?? ""} {...props} />
   ),
+  YouTube,
+  Clip,
 };

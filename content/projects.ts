@@ -12,7 +12,10 @@ export type Project = {
   // One-line "what + the non-obvious decision", shown on the card.
   summary: string;
   tags: string[];
-  repo: string;
+  // Public repository. Omit for private code (e.g. coursework), and set
+  // `codeNote` to explain where the code is instead.
+  repo?: string;
+  codeNote?: string;
   // Path under /public.
   cover?: string;
   // Compact, verified result bullets for the card (no fabrication).
@@ -22,6 +25,24 @@ export type Project = {
 };
 
 export const projects: Project[] = [
+  {
+    slug: "f1tenth-autonomy",
+    title: "F1TENTH Autonomy Stack — CMU 16-665",
+    status: "complete",
+    period: "Aug 2026 — Sep 2026",
+    summary:
+      "Taking a 1/10-scale race car from emergency braking to planning around obstacles, one capability at a time — and running every step on the real car, not just in simulation.",
+    tags: ["ROS 2", "Pure Pursuit", "RRT", "Particle Filter", "LiDAR", "Hardware"],
+    codeNote: "Code is private under course policy — happy to walk through it on request.",
+    cover: "/projects/f1tenth-pursuit-hardware.gif",
+    highlights: [
+      "Four steps on the real car: wall following with emergency braking → follow-the-gap → particle-filter pure pursuit → RRT detours",
+      "Pure pursuit lookahead swept 0.3–2.0 m in sim against wall clearance; kept 0.6 m to tolerate particle-filter pose noise on the car",
+      "RRT local planner on a LiDAR occupancy grid: 15/15 clean simulated laps, with a full detour flown on every run",
+    ],
+    featured: true,
+    order: 1,
+  },
   {
     slug: "proprioceptive-contact-detection",
     title: "Proprioceptive Contact Estimation",
@@ -38,7 +59,7 @@ export const projects: Project[] = [
       "AUC 0.99, detection SNR ~17×, faster than a classical momentum observer with perfect dynamics",
     ],
     featured: true,
-    order: 2,
+    order: 3,
   },
   {
     slug: "deep-rl-cs285",
@@ -55,7 +76,7 @@ export const projects: Project[] = [
       "DQN scales from CartPole to raw-pixel Atari; every run reproducible from a version-controlled YAML",
     ],
     featured: true,
-    order: 3,
+    order: 4,
   },
   {
     slug: "bipedal-walker",
@@ -73,7 +94,7 @@ export const projects: Project[] = [
       "An RL policy with healthy training curves failed physical gates: duty factor 1.00 means standing, not walking",
     ],
     featured: true,
-    order: 1,
+    order: 2,
   },
 ];
 

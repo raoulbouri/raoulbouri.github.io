@@ -11,7 +11,9 @@ export function FeaturedProjects() {
           <SectionHeader eyebrow="Projects" title="Featured Projects" />
         </Reveal>
 
-        <div className="section-body grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Two columns at every wide size: four projects fill a clean 2 × 2
+            instead of leaving one orphaned card in a three-column grid. */}
+        <div className="section-body grid gap-5 sm:gap-6 md:grid-cols-2">
           {featuredProjects.map((p, i) => (
             <Reveal key={p.slug} delay={i * 0.06}>
               <ProjectCard project={p} />

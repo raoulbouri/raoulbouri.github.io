@@ -42,14 +42,21 @@ export default async function ProjectPage({ params }: { params: { slug: string }
             >
               {project.status === "ongoing" ? "● in progress" : "✓ complete"}
             </span>
-            <a
-              href={project.repo}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-xs text-muted hover:text-accent"
-            >
-              GitHub ↗
-            </a>
+            {project.repo ? (
+              <a
+                href={project.repo}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono text-xs text-muted hover:text-accent"
+              >
+                GitHub ↗
+              </a>
+            ) : (
+              <span className="font-mono text-xs text-faint">Code private</span>
+            )}
+            {project.period ? (
+              <span className="font-mono text-xs text-faint">{project.period}</span>
+            ) : null}
           </div>
           <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{project.title}</h1>
           <p className="mt-4 text-lg leading-relaxed text-muted">{project.summary}</p>
@@ -70,13 +77,17 @@ export default async function ProjectPage({ params }: { params: { slug: string }
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-border py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-4">
           <Link href="/#projects" className="btn">
             ← All projects
           </Link>
-          <a href={project.repo} target="_blank" rel="noreferrer" className="btn-accent">
-            View repository ↗
-          </a>
+          {project.repo ? (
+            <a href={project.repo} target="_blank" rel="noreferrer" className="btn-accent">
+              View repository ↗
+            </a>
+          ) : project.codeNote ? (
+            <p className="max-w-sm text-right text-sm text-faint">{project.codeNote}</p>
+          ) : null}
         </div>
       </div>
     </article>

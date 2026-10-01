@@ -16,6 +16,9 @@ export const site = {
   linkedinHandle: "raoulbouri",
   resume: "/rahul-bouri-cv.pdf",
   url: "https://raoulbouri.github.io",
+  // Google Analytics 4 measurement ID ("G-XXXXXXXXXX", from GA Admin → Data
+  // streams → your web stream). Empty = analytics off. See Analytics.tsx.
+  gaMeasurementId: "",
 };
 
 export type NavItem = { label: string; href: string };

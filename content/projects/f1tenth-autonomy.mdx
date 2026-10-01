@@ -1,0 +1,133 @@
+<Clip
+  src="/projects/f1tenth-pursuit-hardware.gif"
+  alt="The F1TENTH car driving itself down a locker hallway, with an RViz inset showing the map and its estimated pose."
+  caption="On the real car: pure pursuit tracking a recorded line through the AIMS locker hallways, localized by a particle filter (RViz inset)."
+/>
+
+Over CMU's **16-665 Robot Mobility**, I took an F1TENTH car — a 1/10-scale RC chassis with a 2D LiDAR, a VESC motor controller and an onboard computer running ROS 2 — from "don't hit the wall" to planning its own way around obstacles.
+
+Each lab added one capability. Every one was built and tested in the F1TENTH simulator first, and every one then had to work on the real car, which is where most of the lessons below came from.
+
+1. **Don't crash** — time-to-collision emergency braking and PID wall following.
+2. **Avoid what's in the way** — follow-the-gap, reacting to raw LiDAR.
+3. **Know where you are and follow a line** — particle-filter localization and pure pursuit.
+4. **Plan around obstacles** — an RRT local planner on a live occupancy grid.
+
+## Step 1 — Don't crash: emergency braking and wall following
+
+<YouTube id="lU56cSESrSQ" title="On the car: PID wall following through the turns" vertical />
+
+**Emergency braking.** For every LiDAR beam, the time to collision is the measured range divided by how fast the car is closing on that point (`v·cos θ` along the beam). Invalid returns and readings below the sensor's minimum are ignored. If the smallest time to collision falls below 0.5 s, the node commands zero speed. In simulation the car drove about 18 m down a hallway at 2 m/s without a single false brake, then stopped 0.74 m short of a wall.
+
+**Wall following.** Two beams, at 90° and 45°, give the wall's angle and the car's distance from it; that distance is projected 0.25 m ahead and a PID controller steers to hold 1.0 m, with speed stepping down from 1.5 to 0.5 m/s as the steering angle grows.
+
+- The assignment's error convention was written for following the *right* wall. Following the left one, the error grew from 0.30 to 0.88 m — positive feedback — until the sign was flipped.
+- A derivative gain of 0.15 made the steering chatter by ±24° at the control rate; 0.01 was enough.
+
+**On the car**, the braking node sits between the wall follower and the motors: the wall follower publishes to `/unfiltered_drive`, and only commands the safety node clears reach the wheels. Steering calibration was its own lesson — changing the VESC steering gain did nothing at all, because the computed servo value fell outside the allowed range and was being clamped. Only reducing the gain's magnitude (to −0.93) brought it back into range.
+
+Simulation runs: [emergency braking](https://youtu.be/Vu14x8rG3ls) · [wall following](https://youtu.be/JXmMVLIUwEo)
+
+## Step 2 — Avoid what's in the way: follow the gap
+
+<Clip
+  src="/projects/f1tenth-gap-hardware.gif"
+  alt="The F1TENTH car weaving between red and blue box obstacles in a hallway."
+  caption="On the car: weaving through box obstacles with follow-the-gap."
+  vertical
+/>
+
+A purely reactive planner: no map, no memory, just the current scan.
+
+- **Clean the scan** — drop invalid returns, cap far readings, lightly smooth.
+- **Extend disparities** — where adjacent beams jump in range, there is an edge; the closer range is extended across the neighbouring beams so the car can't cut the corner.
+- **Inflate every obstacle by the car's radius** — so the car can be planned as a point, and each beam holds the distance the car can actually drive along it.
+- **Pick the gap and the point** — the gap containing the farthest reachable point, aiming at the centre of its near-maximum plateau rather than the single farthest beam.
+- **Guard the corners, recover when stuck** — drive straight if something is too close on the side being turned toward; if no gap is reachable, reverse briefly and re-plan.
+
+The most useful lesson was a wrong hypothesis. The car kept backing up in a cluster of boxes, and I assumed the robot radius was too large — but shrinking it caused collisions instead. The real cause was the disparity extension *stacking on top of* the inflation: 2 × radius + extension came to 0.45 m, exactly the width of the slot between the boxes, so the gap vanished. Setting the extension to zero in simulation got the car through all six obstacles.
+
+On the real car, four LiDAR beams were hitting the car's own chassis at about 0.17 m, which collapsed the usable forward view from 3.94 m to 0.51 m. Ignoring returns closer than 0.20 m fixed it.
+
+Simulation runs: [levine_blocked](https://youtu.be/1694PkFUkhM) · [levine_obs](https://youtu.be/iWFDYbhWSek) — the obstacle map has a 0.45 m slot for a 0.31 m-wide car and a dead-end pocket that a memoryless planner can drive into, so it is not failure-free, and the submission said so.
+
+## Step 3 — Know where you are: particle filter + pure pursuit
+
+<YouTube id="r8tLKzRWAZ4" title="Full hardware run: pure pursuit with particle-filter localization" />
+
+In simulation the car's pose is perfect. On the real car it comes from a particle filter that matches each LiDAR scan against a prebuilt map of the building — so everything downstream has to tolerate a pose that is a little wrong all the time.
+
+**The line.** I recorded the simulation raceline by letting Step 2's gap follower drive a lap (423 poses), refit it as a periodic spline, and re-centred each point along the track normal using a distance transform of the map: 500 points over a 61.8 m loop, never closer than 0.543 m to a wall. The first spline fit ran straight through walls (0.000 m clearance); constraining the re-centring to the normal direction fixed it.
+
+**The controller.** Pure pursuit picks the first waypoint at least one lookahead distance ahead, transforms it into the car's frame, and steers along the arc through it: curvature `2y/L²`, steering `atan(wheelbase × curvature)`. The nearest-waypoint search is limited to ±40 points around the previous one, so the car can never "jump" to the far side of the loop.
+
+**Choosing the lookahead.** A sweep in simulation, measuring the closest the car's body came to a wall over a lap:
+
+<div className="mt-4 overflow-x-auto">
+  <table className="w-full min-w-[34rem] border-collapse font-mono text-xs text-muted">
+    <thead>
+      <tr className="border-b border-border text-left text-ink">
+        <th className="py-2 pr-3 font-medium">lookahead (m)</th>
+        <th className="px-2 py-2 font-medium">0.3</th>
+        <th className="px-2 py-2 font-medium">0.4</th>
+        <th className="px-2 py-2 font-medium">0.5</th>
+        <th className="px-2 py-2 font-medium">0.6</th>
+        <th className="px-2 py-2 font-medium">0.8</th>
+        <th className="px-2 py-2 font-medium">1.0</th>
+        <th className="px-2 py-2 font-medium">1.5</th>
+        <th className="px-2 py-2 font-medium">2.0</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td className="py-2 pr-3 text-ink">clearance (m)</td>
+        <td className="px-2 py-2">0.383</td>
+        <td className="px-2 py-2">0.376</td>
+        <td className="px-2 py-2">0.369</td>
+        <td className="px-2 py-2">0.343–0.351</td>
+        <td className="px-2 py-2">0.298</td>
+        <td className="px-2 py-2">0.250</td>
+        <td className="px-2 py-2">0.129</td>
+        <td className="px-2 py-2">collision</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+A long lookahead cuts corners until it clips the inside wall. In simulation shorter was always better, but I kept 0.6 m: the simulator's pose is noise-free, and a short lookahead amplifies particle-filter pose noise on the car. Lap time was deliberately not the metric — the same configuration measured 15.5 s and 20.4 s on repeat runs, so it is noise. On the car the controller ran with the real wheelbase (0.25 m), a 21° steering limit, and speeds lowered to 1.5 / 1.0 / 0.8 m/s.
+
+Simulation run: [pure pursuit on Levine](https://youtu.be/FyXQ6t_GHfw)
+
+## Step 4 — Plan around obstacles: RRT local planner
+
+<Clip
+  src="/projects/f1tenth-rrt-hardware.gif"
+  alt="The F1TENTH car approaching block obstacles placed on its route, beside an RViz view of the waypoint loop and LiDAR hits."
+  caption="On the car: blocks placed on the route; RViz shows the waypoint loop (green) and live LiDAR returns around the car."
+/>
+
+The car follows its Step 3 line with pure pursuit and switches to RRT **only when the route ahead is blocked**, then returns to the line once it is past the obstacle (or re-plans if a new one appears first).
+
+- **A live occupancy grid from the LiDAR** — 7 m ahead and ±4 m across, with a distance transform giving every cell its clearance. Inflation is tighter sideways (0.22 m) than along the heading (0.32 m), so the car's rectangular footprint becomes an ellipse rather than an oversized circle. Cells behind a short obstacle's visible face are marked occupied, so the planner never routes through space it hasn't actually seen.
+- **Goal selection** — waypoints ahead are checked against the grid; the goal is the first clear waypoint a margin past the blockage, snapped to a cell actually reachable from the car, so RRT is never asked to plan through a wall or into a pocket.
+- **RRT** — the standard sample → nearest → steer → collision-check loop, sampling mostly from open space so the tree grows through wide gaps first. Each planning call takes several attempts and keeps the straightest path that clears obstacles by a minimum margin, then shortcuts it and pulls it toward the middle of the gap, checking that this can never introduce a collision.
+
+**Verified in simulation over 25 runs, checked against the true map rather than the planner's own grid.** On the first obstacle layout the car made 20/25 clean laps; all five failures were at two spots with only 0.05 m of geometric slack. Re-running those exact seeds individually always passed, so the layout was too tight for a 0.05 m grid, not the planner. With at least 0.4 m of slack everywhere: 15/15 clean laps, with a full detour flown on every run.
+
+One bug worth remembering: the detour was planned for the car's body centre (0.275 m ahead of its pose) and then shifted back along the path's own tangent. At sharp corners that tangent is unstable, and once it pushed the path through the corner of an obstacle that the collision-checked version had cleared. The fix was to delete code: pure pursuit can steer the pose straight toward the body-centre path, exactly as it steers toward waypoints.
+
+<YouTube id="yrSepmlVHqQ" title="Full hardware run: RRT detour around obstacles" />
+
+<YouTube id="b1FQyw1oJC4" title="Simulation: the RRT tree, chosen path and goal at every step" />
+
+## What changed between the simulator and the car
+
+- **Pose stops being free.** Simulation publishes perfect odometry; the car only has a particle-filter estimate, on a different topic and message type. Every controller had to be configurable for both.
+- **The sensor sees the car.** Chassis self-hits silently shrank the LiDAR's usable view until they were filtered out.
+- **Actuators have limits you don't choose.** The steering servo clamps its command; a gain change that "does nothing" is often a clamped output.
+- **Safety is layered.** The car only drives autonomously while a deadman button is held, and the command multiplexer always ranks the human's teleop above the autonomy stack — so a person can take over instantly.
+- **One driver per car.** Two copies of the hardware bringup fight over the motor controller's serial link; most "the car won't move" sessions came down to process hygiene, not algorithms.
+
+## About the code
+
+The code is private under the course's academic-integrity policy, and it builds on the course's starter code — the F1TENTH simulator, skeleton nodes and the particle filter. I'm happy to walk through the implementation in detail on request.

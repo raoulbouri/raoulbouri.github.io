@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeScript } from "@/components/ThemeScript";
 import { Nav } from "@/components/Nav";
+import { Analytics } from "@/components/Analytics";
 import { site } from "@content/site";
 
 const inter = Inter({
@@ -87,6 +88,7 @@ export default function RootLayout({
         </a>
         <Nav />
         <main>{children}</main>
+        <Analytics />
       </body>
     </html>
   );
