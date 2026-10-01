@@ -1,5 +1,5 @@
 <Clip
-  src="/projects/f1tenth-pursuit-hardware.gif"
+  src="/projects/f1tenth-pursuit-hardware.mp4"
   alt="The F1TENTH car driving itself down a locker hallway, with an RViz inset showing the map and its estimated pose."
   caption="On the real car: pure pursuit tracking a recorded line through the AIMS locker hallways, localized by a particle filter (RViz inset)."
 />
@@ -26,12 +26,19 @@ Each lab added one capability. Every one was built and tested in the F1TENTH sim
 
 **On the car**, the braking node sits between the wall follower and the motors: the wall follower publishes to `/unfiltered_drive`, and only commands the safety node clears reach the wheels. Steering calibration was its own lesson — changing the VESC steering gain did nothing at all, because the computed servo value fell outside the allowed range and was being clamped. Only reducing the gain's magnitude (to −0.93) brought it back into range.
 
+<Specs>
+  <Spec k="Braking rule">Zero speed when the minimum time to collision drops below 0.5 s; no braking below 0.1 m/s</Spec>
+  <Spec k="PID gains">kp 0.5 · ki 0.05 · kd 0.01, with integral and steering-angle clamps</Spec>
+  <Spec k="Wall geometry">Beams at 90° and 45° · 0.25 m projection · 1.0 m target distance</Spec>
+  <Spec k="On the car">Wall follower capped at 0.5 m/s; brake gate with a 0.20 m bumper offset and 0.25 m stop distance</Spec>
+</Specs>
+
 Simulation runs: [emergency braking](https://youtu.be/Vu14x8rG3ls) · [wall following](https://youtu.be/JXmMVLIUwEo)
 
 ## Step 2 — Avoid what's in the way: follow the gap
 
 <Clip
-  src="/projects/f1tenth-gap-hardware.gif"
+  src="/projects/f1tenth-gap-hardware.mp4"
   alt="The F1TENTH car weaving between red and blue box obstacles in a hallway."
   caption="On the car: weaving through box obstacles with follow-the-gap."
   vertical
@@ -48,6 +55,13 @@ A purely reactive planner: no map, no memory, just the current scan.
 The most useful lesson was a wrong hypothesis. The car kept backing up in a cluster of boxes, and I assumed the robot radius was too large — but shrinking it caused collisions instead. The real cause was the disparity extension *stacking on top of* the inflation: 2 × radius + extension came to 0.45 m, exactly the width of the slot between the boxes, so the gap vanished. Setting the extension to zero in simulation got the car through all six obstacles.
 
 On the real car, four LiDAR beams were hitting the car's own chassis at about 0.17 m, which collapsed the usable forward view from 3.94 m to 0.51 m. Ignoring returns closer than 0.20 m fixed it.
+
+<Specs title="Under the hood — car parameters">
+  <Spec k="Inflation">0.25 m robot radius on every LiDAR point</Spec>
+  <Spec k="Disparities">0.05 m extension on the car (0 in simulation)</Spec>
+  <Spec k="Steering">20° limit · 5-beam smoothing window</Spec>
+  <Spec k="Safety">0.35 m side-clearance guard · 0.2 m/s reverse-and-replan · returns under 0.20 m ignored</Spec>
+</Specs>
 
 Simulation runs: [levine_blocked](https://youtu.be/1694PkFUkhM) · [levine_obs](https://youtu.be/iWFDYbhWSek) — the obstacle map has a 0.45 m slot for a 0.31 m-wide car and a dead-end pocket that a memoryless planner can drive into, so it is not failure-free, and the submission said so.
 
@@ -94,14 +108,21 @@ In simulation the car's pose is perfect. On the real car it comes from a particl
   </table>
 </div>
 
-A long lookahead cuts corners until it clips the inside wall. In simulation shorter was always better, but I kept 0.6 m: the simulator's pose is noise-free, and a short lookahead amplifies particle-filter pose noise on the car. Lap time was deliberately not the metric — the same configuration measured 15.5 s and 20.4 s on repeat runs, so it is noise. On the car the controller ran with the real wheelbase (0.25 m), a 21° steering limit, and speeds lowered to 1.5 / 1.0 / 0.8 m/s.
+A long lookahead cuts corners until it clips the inside wall. In simulation shorter was always better, but I kept 0.6 m: the simulator's pose is noise-free, and a short lookahead amplifies particle-filter pose noise on the car. Lap time was deliberately not the metric — the same configuration measured 15.5 s and 20.4 s on repeat runs, so it is noise.
+
+<Specs>
+  <Spec k="Particle filter">3,000 particles · expected ranges ray-marched on the GPU (range_libc) · 10 m max range</Spec>
+  <Spec k="Sensor model">Per-beam likelihoods tempered by a squash factor of 2.2, so hundreds of correlated beams don't make the filter overconfident</Spec>
+  <Spec k="Steering law">atan(wheelbase · 2y/L²), clamped to 21° on the car (wheelbase 0.25 m)</Spec>
+  <Spec k="Speed schedule">1.5 / 1.0 / 0.8 m/s on the car, stepping down at 5° and 12° of steering</Spec>
+</Specs>
 
 Simulation run: [pure pursuit on Levine](https://youtu.be/FyXQ6t_GHfw)
 
 ## Step 4 — Plan around obstacles: RRT local planner
 
 <Clip
-  src="/projects/f1tenth-rrt-hardware.gif"
+  src="/projects/f1tenth-rrt-hardware.mp4"
   alt="The F1TENTH car approaching block obstacles placed on its route, beside an RViz view of the waypoint loop and LiDAR hits."
   caption="On the car: blocks placed on the route; RViz shows the waypoint loop (green) and live LiDAR returns around the car."
 />
@@ -115,6 +136,14 @@ The car follows its Step 3 line with pure pursuit and switches to RRT **only whe
 **Verified in simulation over 25 runs, checked against the true map rather than the planner's own grid.** On the first obstacle layout the car made 20/25 clean laps; all five failures were at two spots with only 0.05 m of geometric slack. Re-running those exact seeds individually always passed, so the layout was too tight for a 0.05 m grid, not the planner. With at least 0.4 m of slack everywhere: 15/15 clean laps, with a full detour flown on every run.
 
 One bug worth remembering: the detour was planned for the car's body centre (0.275 m ahead of its pose) and then shifted back along the path's own tangent. At sharp corners that tangent is unstable, and once it pushed the path through the corner of an obstacle that the collision-checked version had cleared. The fix was to delete code: pure pursuit can steer the pose straight toward the body-centre path, exactly as it steers toward waypoints.
+
+<Specs>
+  <Spec k="Grid">0.05 m cells · from 0.5 m behind to 7.0 m ahead of the LiDAR · ±4 m across</Spec>
+  <Spec k="Inflation">0.22 m sideways (half-width 0.155 m + margin) · 0.32 m lengthwise (half-length 0.165 m + margin)</Spec>
+  <Spec k="Trigger and goal">Plan when the route is blocked within 4.5 m · goal 0.8 m past the blockage</Spec>
+  <Spec k="Planner budget">6 attempts of up to 600 iterations / 100 ms · 0.35 m steer step and goal tolerance · 15% goal bias · 70% of samples from cells with 0.34 m+ clearance</Spec>
+  <Spec k="Path quality">Prefer paths 0.26 m+ from obstacles · re-centred up to 0.40 m · 0.5 s re-plan cooldown</Spec>
+</Specs>
 
 <YouTube id="yrSepmlVHqQ" title="Full hardware run: RRT detour around obstacles" />
 

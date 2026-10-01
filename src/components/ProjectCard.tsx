@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Project } from "@content/projects";
+import { LoopVideo } from "./LoopVideo";
 
 export function ProjectCard({ project }: { project: Project }) {
   return (
@@ -11,7 +12,14 @@ export function ProjectCard({ project }: { project: Project }) {
       {/* Cover media. Falls back to a schematic placeholder until a real asset
           is dropped at project.cover. */}
       <div className="relative aspect-[16/9] overflow-hidden border-b border-border bg-surface-2">
-        {project.cover ? (
+        {project.cover?.endsWith(".mp4") ? (
+          <LoopVideo
+            src={project.cover}
+            poster={project.cover.replace(/\.mp4$/, ".jpg")}
+            label={`${project.title} demo`}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : project.cover ? (
           <Image
             src={project.cover}
             alt={`${project.title} demo`}

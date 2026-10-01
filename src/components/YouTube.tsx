@@ -6,6 +6,11 @@ import { useState } from "react";
 // every player up front costs ~1 MB of JS each, which is heavy on a phone. This
 // shows the video thumbnail and only swaps in the (privacy-enhanced) player
 // when the visitor presses play. `vertical` sizes the frame for Shorts.
+//
+// Thumbnails: the default hqdefault.jpg is only 480×360 (and letterboxed for
+// Shorts), which looks blurry at article width. Use the 1280×720 frame for
+// regular videos and YouTube's vertical "oar" frame for Shorts, falling back to
+// hqdefault if a size doesn't exist for a given video.
 export function YouTube({
   id,
   title,
@@ -16,6 +21,9 @@ export function YouTube({
   vertical?: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
+  const [thumb, setThumb] = useState(
+    `https://i.ytimg.com/vi/${id}/${vertical ? "oardefault" : "maxresdefault"}.jpg`
+  );
 
   return (
     <figure className={`mt-6 ${vertical ? "mx-auto w-full max-w-[300px]" : ""}`}>
@@ -41,9 +49,10 @@ export function YouTube({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`}
+              src={thumb}
               alt=""
               loading="lazy"
+              onError={() => setThumb(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`)}
               className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
             />
             <span className="absolute left-1/2 top-1/2 grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white transition-colors group-hover:bg-accent">

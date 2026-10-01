@@ -1,9 +1,11 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { YouTube } from "./YouTube";
+import { LoopVideo } from "./LoopVideo";
 
-// Looping hardware clip (GIF) with a caption, for case studies. `vertical`
-// caps portrait (phone-shot) clips at their native width instead of
-// stretching them across the column.
+// Looping hardware clip with a caption, for case studies. An .mp4 source plays
+// as a silent HD loop (poster: same name, .jpg); anything else renders as an
+// image. `vertical` caps portrait (phone-shot) clips instead of stretching
+// them across the column.
 function Clip({
   src,
   alt,
@@ -15,14 +17,41 @@ function Clip({
   caption?: string;
   vertical?: boolean;
 }) {
+  const media = "w-full rounded-lg border border-border bg-black";
   return (
     <figure className={`mt-6 ${vertical ? "mx-auto w-full max-w-[300px]" : ""}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} loading="lazy" className="w-full rounded-lg border border-border" />
+      {src.endsWith(".mp4") ? (
+        <LoopVideo src={src} poster={src.replace(/\.mp4$/, ".jpg")} label={alt} className={media} />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={alt} loading="lazy" className={media} />
+      )}
       {caption ? (
         <figcaption className="mt-2 text-center text-sm text-faint">{caption}</figcaption>
       ) : null}
     </figure>
+  );
+}
+
+// Compact "under the hood" box: a few key numbers per step, so technical
+// detail stays scannable instead of turning into more paragraphs.
+function Specs({ title = "Under the hood", children }: { title?: string; children: ReactNode }) {
+  return (
+    <div className="mt-5 rounded-lg border border-border bg-surface-2 px-4 py-3">
+      <p className="font-mono text-xs uppercase tracking-wider text-accent">{title}</p>
+      <dl className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[minmax(8rem,auto)_1fr]">
+        {children}
+      </dl>
+    </div>
+  );
+}
+
+function Spec({ k, children }: { k: string; children: ReactNode }) {
+  return (
+    <>
+      <dt className="font-medium text-ink">{k}</dt>
+      <dd className="text-muted">{children}</dd>
+    </>
   );
 }
 
@@ -72,4 +101,6 @@ export const mdxComponents = {
   ),
   YouTube,
   Clip,
+  Specs,
+  Spec,
 };

@@ -34,7 +34,8 @@ export const projects: Project[] = [
       "Taking a 1/10-scale race car from emergency braking to planning around obstacles, one capability at a time — and running every step on the real car, not just in simulation.",
     tags: ["ROS 2", "Pure Pursuit", "RRT", "Particle Filter", "LiDAR", "Hardware"],
     codeNote: "Code is private under course policy — happy to walk through it on request.",
-    cover: "/projects/f1tenth-pursuit-hardware.gif",
+    // A .mp4 cover renders as a silent looping video (poster: same name, .jpg).
+    cover: "/projects/f1tenth-pursuit-hardware-card.mp4",
     highlights: [
       "Four steps on the real car: wall following with emergency braking → follow-the-gap → particle-filter pure pursuit → RRT detours",
       "Pure pursuit lookahead swept 0.3–2.0 m in sim against wall clearance; kept 0.6 m to tolerate particle-filter pose noise on the car",

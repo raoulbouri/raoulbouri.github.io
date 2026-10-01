@@ -14,11 +14,13 @@ export const site = {
   githubHandle: "raoulbouri",
   linkedin: "https://www.linkedin.com/in/raoulbouri/",
   linkedinHandle: "raoulbouri",
-  resume: "/rahul-bouri-cv.pdf",
+  // Résumé lives on Google Drive so it can be updated without a redeploy;
+  // raoulbouri.github.io/resume redirects here (src/app/resume/page.tsx).
+  resume: "https://drive.google.com/file/d/1k710PB1xyok_TsraOhDMqbm6Anq6OuuO/view?usp=sharing",
   url: "https://raoulbouri.github.io",
   // Google Analytics 4 measurement ID ("G-XXXXXXXXXX", from GA Admin → Data
   // streams → your web stream). Empty = analytics off. See Analytics.tsx.
-  gaMeasurementId: "",
+  gaMeasurementId: "G-YGQK2FFCLB",
 };
 
 export type NavItem = { label: string; href: string };
