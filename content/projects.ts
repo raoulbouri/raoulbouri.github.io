@@ -47,18 +47,18 @@ export type Project = {
 export const projects: Project[] = [
   {
     slug: "yt-to-humanoid",
-    title: "Video to Humanoid — Whole-Body Imitation on a Simulated G1",
+    title: "YouTube Video to Humanoid: Whole-Body Control on a Simulated G1",
     status: "complete",
     period: "Oct 2026",
     summary:
-      "An ordinary video goes in; a simulated Unitree G1 dances like the person in it. I wired NVIDIA's open perception and whole-body control models into one reproducible pipeline — and measured how faithfully the robot actually follows.",
+      "An ordinary video goes in. A simulated Unitree G1 dances like the person (alien) in it. I wired NVIDIA's open perception and whole-body control models into one reproducible pipeline. Then I measured how closely the robot follows.",
     tags: ["Humanoid", "Whole-Body Control", "MuJoCo", "Pose Estimation", "Evaluation"],
     repo: "https://github.com/raoulbouri/YT-to-humanoid",
     cover: "/projects/yt-humanoid-card.mp4",
     highlights: [
-      "End to end: video → 3D human pose → streamed joint targets → a learned whole-body policy balancing a 29-DoF humanoid in MuJoCo",
-      "Robot never fell across 7 replays; human-vs-robot limb angles correlate 0.8–0.9, with 0.4 s measured latency",
-      "Evaluation traced the biggest error to perception, not control — side-on video hides how far apart the hands are",
+      "Video to 3D human pose to a learned whole-body policy. The policy balances a 29-DoF humanoid in MuJoCo.",
+      "The robot never fell in 7 replays. Human and robot limb angles correlate at 0.8 to 0.9, with 0.4 s of latency.",
+      "The biggest error came from perception, not control. Side-on video hides how far apart the hands are.",
     ],
     featured: true,
     order: 0,
@@ -66,7 +66,7 @@ export const projects: Project[] = [
     start: "2026-10",
     end: "2026-10",
     oneLiner:
-      "An ordinary video in, a simulated Unitree G1 dancing like the person in it, plus measurements of how faithfully it follows.",
+      "A simulated Unitree G1 copies the dancer in an ordinary video. I measured how closely it follows.",
     wide: true,
   },
   {
