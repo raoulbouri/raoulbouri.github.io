@@ -34,7 +34,7 @@ export function About() {
                 I&apos;m pursuing a Master of Robotic Systems Development at <span className="text-ink">Carnegie Mellon</span>, focused on robot learning, foundation models, and scalable ML systems for Physical AI.
               </p>
               <p>
-                Before CMU, I built and deployed LLM and agent systems at AlphaSense, and productionized ML at OLA Cabs: real-time ETA prediction for 100K+ daily orders, document OCR at 10K+ requests a day, and the data pipelines and monitoring that keep models honest in production.
+                Before CMU, I built production ML systems. At AlphaSense I shipped LLM and agent services, including one that serves 100 requests per second. At OLA Cabs I built streaming data pipelines for real-time ETA prediction on 100K+ daily orders, and an OCR service handling 10K+ requests a day. I also built the monitoring that keeps those models honest in production.
               </p>
               <p>
                 Now I&apos;m bringing that engineering discipline to robots: end-to-end policies, simulation, sim-to-real transfer, and deployment on hardware I design and build myself.

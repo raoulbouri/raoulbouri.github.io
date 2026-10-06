@@ -102,7 +102,7 @@ export function RoboticArm() {
       <p className="pointer-events-none absolute inset-x-2 bottom-2 rounded-md bg-bg/70 px-2 py-1 text-center font-mono text-[0.62rem] leading-snug text-faint backdrop-blur-sm sm:inset-x-4 sm:text-[0.68rem]">
         Franka Panda · real kinematics
         <br className="sm:hidden" />
-        <span className="hidden sm:inline"> — </span>
+        <span className="hidden sm:inline"> · </span>
         {unavailable ? "3D preview unavailable on this device" : "tap or click the workspace to grasp"}
       </p>
     </div>

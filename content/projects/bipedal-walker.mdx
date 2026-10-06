@@ -1,115 +1,56 @@
 ![The physical robot: 784 g, 3D-printed frame, six ST3215 servos, Jetson Orin Nano on the torso.](/projects/biped-hardware.jpg)
 
-> **Status: in progress.** The CAD→sim pipeline and the digital-twin validation
-> are done. No walking controller is deployed, and deliberately so — the work
-> below is about earning the right to build one.
+<Specs title="At a glance">
+  <Spec k="Built">A 784 g biped designed in Onshape, with a one-command pipeline from CAD to a MuJoCo model</Spec>
+  <Spec k="Validated">The digital twin, against datasheets and across 12 poses that span a gait</Spec>
+  <Spec k="Result">Found a missing physical term that made the simulated robot 3.3× too slow to stabilize</Spec>
+</Specs>
 
-A 784 g bipedal walker: designed in Onshape, exported through URDF into MuJoCo,
-six actuated joints on ST3215 servos, Jetson Orin Nano riding on the torso. The
-pipeline regenerates the simulation model from CAD with a single command.
+> **Status: in progress.** The CAD-to-simulation pipeline and the digital-twin validation are done. No walking controller is deployed yet. The work below checks that the simulator can be trusted first.
 
-The interesting part isn't the pipeline. It's what happened when I stopped
-building the controller and started asking whether the simulator deserved to be
-trusted at all.
+The robot has six joints driven by ST3215 servos, with a Jetson Orin Nano on the torso. A single command regenerates the simulation model from CAD.
 
-## The question that reframed the project
+The interesting part isn't the pipeline. It's what happened when I stopped building the controller and asked whether the simulator deserved to be trusted.
 
-Rather than write an MPC and debug it against a simulator of unknown quality, I
-ran a dedicated validation phase whose only deliverable was an answer to: **can
-this digital twin predict the real robot, and is it good enough to design a
-controller against?**
+## The question
 
-Answering that honestly turned up a class of bug I now look for everywhere.
+I didn't want to write a controller and debug it against a simulator of unknown quality. So I ran a validation phase first. It had one deliverable: **can this digital twin predict the real robot well enough to design a controller against?**
 
-## The finding: a missing physical term wearing a control gain as a disguise
+## The finding: a missing physical term
 
-The shipped actuator model could not stabilize the robot. Not marginally —
-**3.3× too slow**, with a bandwidth of 4.4 rad/s against unstable plant modes
-running up to 14.4 rad/s. The robot was uncontrollable in simulation before a
-single line of controller existed.
+The actuator model could not stabilize the robot. It was **3.3× too slow**. Its bandwidth was 4.4 rad/s, against unstable modes up to 14.4 rad/s. The robot was uncontrollable in simulation before any controller existed.
 
-![Instability rate at each pose against actuator bandwidth. The shipped actuator (4.4 rad/s) sits below almost every mode it has to suppress; the corrected model clears all of them.](/projects/biped-bandwidth-margin.png)
+![Instability rate at each pose against actuator bandwidth. The shipped actuator (4.4 rad/s) sits below almost every mode it has to suppress. The corrected model clears all of them.](/projects/biped-bandwidth-margin.png)
 
-The reflex is to tune gains. That would have been wrong. The real defect was a
-**missing physical term**: a DC motor's torque–speed line implies a back-EMF
-damping of `τ_stall / ω_noload` = **0.624 N·m·s/rad**. The model used **0.05** —
-12.5× too small.
+The reflex is to tune gains. That would have been wrong. A DC motor's torque-speed line implies a back-EMF damping of **0.624 N·m·s/rad**. The model used **0.05**, which is 12.5× too small.
 
-Here's the part worth internalizing. Because that damping was absent, the
-derivative gain `kv` had been quietly fitted to do damping's job as a velocity
-limiter. So the model *passed* every check that didn't specifically interrogate
-bandwidth — mass, inertia, CoM, contact, friction, and kinematics all validated
-fine. One parameter was impersonating another, and the impersonation was
-invisible to any test that examined a single subsystem in isolation.
+Because that damping was missing, a control gain had been quietly fitted to do its job. So the model passed every check that didn't test bandwidth directly. Mass, inertia, center of mass, contact, friction and kinematics all looked fine. One parameter was standing in for another, and no single-subsystem test could see it.
 
-With the correct damping restored, the velocity ceiling stops being a fitted
-constant and falls out of physics: 2.5 / 0.624 = **4.00 rad/s**, comfortably
-inside the datasheet's 4.712, and `kv` is freed to be a damping gain again. Of
-30 candidate parameter sets that pass the constrained search, **every one uses
-the physical damping value; none with 0.05 passes.**
+With the correct damping, the speed limit falls out of physics: 4.00 rad/s, inside the datasheet's 4.712. Of 30 candidate parameter sets that pass the search, **every one uses the physical damping value**.
 
-**The generalizable lesson:** this only surfaced by cross-checking two
-independent analyses — system identification (what the datasheet *permits*)
-against modal analysis (what stabilizing the plant *requires*). Each was
-internally self-consistent. The contradiction lived in the gap between them.
-Digital-twin bugs of this kind don't announce themselves inside any one
-subsystem; you find them by deriving the same physical quantity two different
-ways and demanding the answers agree.
+**The lesson:** this only showed up by cross-checking two independent analyses. System identification says what the datasheet allows. Modal analysis says what stabilizing the robot requires. Each was consistent on its own. The contradiction sat between them.
 
 ## Three more things the validation caught
 
-**Analyzing the nominal pose is not analyzing the robot.** Earlier work
-linearized only about standing. Across 12 poses spanning a gait, the worst case
-is `lateral_lean` at 14.42 rad/s with 6 unstable modes — the stand-pose-only
-number understated the requirement by **1.86×**, and every pose in that set is
-one a walking gait must pass through. The structural conclusions (3–6 unstable
-modes everywhere, all controllable, all observable from encoders + IMU alone)
-held up. The *rates* did not.
+**One pose is not the robot.** Earlier work looked only at standing. Across 12 poses from a gait, the worst case needs **1.86×** more bandwidth than standing. A walking gait passes through every one of them.
 
-**An assumption was carrying most of the dynamics.** Joint armature had been set
-to 0.01 — a value supplying **86–99% of total joint inertia** while not being
-derivable from the datasheet at all. It was an assumption doing the work of a
-measurement. It has since been resolved from a verified gear ratio (N=345 →
-0.028), but the habit it taught is the point: audit which of your parameters are
-simultaneously load-bearing *and* unverified.
+**An assumption was carrying most of the dynamics.** Joint armature was set to 0.01. That value supplied 86 to 99% of total joint inertia, yet it wasn't derived from anything. It is now set from a verified gear ratio. The habit it taught: check which parameters are both important and unverified.
 
-**The dominant error source wasn't the obvious one.** For linear-model validity
-I expected contact switching or horizon length to dominate. It's **Coulomb
-friction** — zeroing `frictionloss` collapses linearization error by four orders
-of magnitude. And on reduced-order models, plain ALIP turns out to be
-algebraically *identical* to LIPM on this robot (verified to 1e-12), so the
-textbook upgrade buys literally nothing; only the centroidal-momentum term —
-worth 12–21% here — actually helps, out to a usable horizon of about 0.20 s.
+**The biggest error source wasn't the obvious one.** I expected contact switching to dominate the linear model's error. It was **Coulomb friction**. Zeroing it cut the error by four orders of magnitude.
 
-## On the RL side: the reward curve lied
+## The reward curve lied
 
-In parallel I trained a locomotion policy. The training curves looked healthy.
-Evaluated on **reward-independent** physical metrics, it failed:
+In parallel I trained a walking policy with RL. The training curves looked healthy. Measured on physical metrics, it failed.
 
-- duty factor **1.00 / 0.98** — both feet planted essentially always. That's not
-  a gait, it's twitchy double-support.
-- commanded 0.30 m/s, realized **0.002 m/s**.
-- it "survived" the episode — by standing still, which the reward tolerated.
+- Duty factor was 1.00 and 0.98. Both feet stayed planted almost all the time.
+- It was commanded 0.30 m/s and moved at 0.002 m/s.
+- It "survived" each episode by standing still, which the reward allowed.
 
-The verdict I wrote into the results file was blunt: *do not trust this
-checkpoint from training curves alone.* The policy had found the degenerate
-optimum — don't fall — that satisfies the objective without doing the task. It's
-the same lesson that runs through [my CS 285 work](/projects/deep-rl-cs285):
-return is a scalar projection of a behavior, and the degenerate behaviors are
-usually the easiest ones to find.
+The policy found the easy answer, which was not falling, without doing the task. It's the same lesson as in [my RL work](/projects/deep-rl-cs285): a reward curve can hide what the robot is actually doing.
 
-## Where it stands
+## Status
 
-Mass, inertia, CoM, contact, friction, kinematics: validated. Controllability
-and observability: established across the pose envelope rather than one pose.
-The actuator — the component that decides whether this robot can be stabilized
-at all — **has never been measured on hardware.** Every conclusion above is
-conditional on a datasheet.
-
-So the honest position is that building the controller in simulation now is
-reasonable; deploying it is not. The highest-value next experiment isn't a
-better controller — it's one servo on a bench, a step response and a sine sweep,
-closing the only gate that's still failing.
+Mass, inertia, center of mass, contact, friction and kinematics are validated. The actuator itself has not been measured on hardware yet, so every conclusion above still depends on a datasheet.
 
 ---
 

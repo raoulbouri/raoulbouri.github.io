@@ -5,7 +5,7 @@ import { ProjectsIndex } from "@/components/ProjectsIndex";
 
 export const metadata: Metadata = {
   title: "All projects",
-  description: "Robotics, robot learning and ML systems projects — hardware, simulation and research.",
+  description: "Robotics, robot learning and ML systems projects: hardware, simulation and research.",
 };
 
 export default function ProjectsPage() {
@@ -17,7 +17,7 @@ export default function ProjectsPage() {
       <div className="mt-6">
         <SectionHeader eyebrow="Projects" title="All projects" />
         <p className="mt-3 max-w-2xl text-muted">
-          Robotics, robot learning and ML systems — hardware, simulation and research.
+          Robotics, robot learning and ML systems. Hardware, simulation and research.
         </p>
       </div>
       <ProjectsIndex />

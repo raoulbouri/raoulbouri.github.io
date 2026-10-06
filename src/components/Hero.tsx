@@ -14,8 +14,8 @@ export function Hero() {
               Building the ML systems behind robots that <span className="text-accent">learn, adapt, and act</span> in the real world.
             </h1>
             <p className="mt-3 max-w-xl text-lg leading-relaxed text-muted">
-              Two years shipping production ML and LLM systems at AlphaSense and OLA. Now at{" "}
-              <span className="text-ink">Carnegie Mellon</span>, working on robot learning, sim-to-real transfer, and hardware deployment for Physical AI.
+              Two years building production ML systems at AlphaSense and OLA: data pipelines, real-time services and monitoring at scale. Now at{" "}
+              <span className="text-ink">Carnegie Mellon</span>, working on robot learning, simulation and hardware deployment.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <a href="#projects" className="btn-accent">

@@ -20,7 +20,7 @@ export const experience: Role[] = [
     company: "AlphaSense",
     title: "AI Research Engineer",
     location: "Bangalore, India",
-    period: "Dec 2025 — Jul 2026",
+    period: "Dec 2025 to Jul 2026",
     projects: [
       {
         title: "Citation Service for Generative Search",
@@ -44,7 +44,7 @@ export const experience: Role[] = [
     company: "OLA Cabs",
     title: "Machine Learning Engineer",
     location: "Bangalore, India",
-    period: "Aug 2024 — Nov 2025",
+    period: "Aug 2024 to Nov 2025",
     projects: [
       {
         title: "Enterprise Agentic Query Engine",
@@ -78,7 +78,7 @@ export const experience: Role[] = [
     company: "PwC USA",
     title: "Data Science Intern",
     location: "Bangalore, India",
-    period: "Jan 2024 — Jun 2024",
+    period: "Jan 2024 to Jun 2024",
     projects: [
       {
         title: "Agentic Retrieval Framework for Tax Systems",
@@ -93,7 +93,7 @@ export const experience: Role[] = [
     company: "TCS Research",
     title: "Robotics Intern",
     location: "New Delhi, India",
-    period: "Jun 2023 — Dec 2023",
+    period: "Jun 2023 to Dec 2023",
     projects: [
       {
         title: "Perception and Autonomy for Assistive Robotics",
@@ -111,13 +111,13 @@ export const education = [
   {
     school: "Carnegie Mellon University",
     degree: "MS, Robotic Systems Development",
-    period: "Aug 2026 — May 2028",
+    period: "Aug 2026 to May 2028",
     detail: "Robot Learning · Planning & Decision Making · Robot Autonomy · Systems Engineering",
   },
   {
     school: "BITS Pilani",
     degree: "BE, Mechanical Engineering (AI Minor)",
-    period: "Aug 2020 — May 2024",
+    period: "Aug 2020 to May 2024",
     detail: "CGPA 8.6/10 · Control Systems · Mechanisms & Machines · Machine Learning · Deep Learning",
   },
 ];

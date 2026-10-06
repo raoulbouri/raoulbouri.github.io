@@ -4,6 +4,12 @@
   caption="One continuous 40-second take. Top: the input video and the 3D skeleton estimated from it. Bottom: the simulated G1 from the front and the side, re-rendered from its logged state. The dancer is a CGI character."
 />
 
+<Specs title="At a glance">
+  <Spec k="Built">A video-to-robot pipeline: clip prep, 3D pose extraction, real-time streaming and a simulated humanoid</Spec>
+  <Spec k="Scale">3 clips and 7 replays, up to 1,200 frames per run, on a remote GPU machine</Spec>
+  <Spec k="Result">No falls. Limb angles track the dancer at 0.8 to 0.9 correlation, with 0.4 s of latency.</Spec>
+</Specs>
+
 Humanoid robots are increasingly taught by watching people. This project runs that idea end to end with NVIDIA's open humanoid stack. A normal video goes in. A simulated Unitree G1 reproduces the motion. It balances on its own, with no motion capture and no robot-specific retargeting.
 
 GEM-X estimates pose from video. SONIC is the whole-body controller. Both are NVIDIA's released models, and I did not train them. My work is everything around them. I built the pipeline that connects them and the simulation setup that runs them reproducibly. I also built the tools that measure how well the robot follows its input.
@@ -20,6 +26,13 @@ video → GEM-X (3D human pose) → SMPL joints → ZMQ stream → SONIC (whole-
 4. **Control.** SONIC is a learned policy. It maps human motion to robot joint targets at 50 Hz and keeps the 29-DoF G1 balanced.
 5. **Simulation and recording.** The G1 runs in MuJoCo. The input stream and the robot's joint state are logged on one clock for analysis.
 
+## Data pipeline
+
+- **Video preparation.** Clips are converted to a constant frame rate. Variable frame rates silently broke pose estimation.
+- **Precompute, then replay on a fixed clock.** NVIDIA's offline replay ran a 24 fps clip at 14 fps, because conversion time added to every frame. I converted every frame once and published on an absolute schedule. The demo streamed 1,200 frames in 39.97 s, with one late frame.
+- **A small upstream fix.** NVIDIA's pose converter crashed on the current body-model release. A 5-line patch with unit tests fixed it.
+- **Reproducible setup.** Third-party repos are pinned to exact commits. There is one config file and a script for every stage.
+
 ## End-to-end policies
 
 SONIC is an end-to-end whole-body controller. It observes the human skeleton and outputs every joint target directly. The human-to-robot mapping is learned inside the policy, not written by hand.
@@ -30,13 +43,6 @@ Getting it running took three steps. I built its C++ deployment with TensorRT on
 
 - **Headless and scripted.** MuJoCo runs on a virtual display on a remote GPU machine. I can watch it live in a browser. Scripts start it, drive it and stop it. They also release the safety harness that holds the robot up at the start.
 - **Re-rendered, synchronized views.** The front and side videos are rendered from the robot's logged state. Both views show the identical motion. They are shifted by the measured latency so they line up with the original.
-
-## Data pipeline
-
-- **Video preparation.** Clips are converted to a constant frame rate. Variable frame rates silently broke pose estimation.
-- **Precompute, then replay on a fixed clock.** NVIDIA's offline replay ran a 24 fps clip at 14 fps, because conversion time added to every frame. I converted every frame once and published on an absolute schedule. The demo streamed 1,200 frames in 39.97 s, with one late frame.
-- **A small upstream fix.** NVIDIA's pose converter crashed on the current body-model release. A 5-line patch with unit tests fixed it.
-- **Reproducible setup.** Third-party repos are pinned to exact commits. There is one config file and a script for every stage.
 
 ## Evaluation
 

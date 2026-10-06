@@ -23,7 +23,7 @@ export function Experience() {
               <li key={`${role.company}-${role.period}`}>
                 <div className="grid grid-cols-[4.5rem_1fr] gap-x-3 sm:grid-cols-[6rem_1fr] sm:gap-x-4">
                   <div className="pt-1 text-right font-mono text-[0.65rem] leading-tight text-faint sm:text-xs">
-                    {role.period.split(" — ").map((part) => (
+                    {role.period.split(" to ").map((part) => (
                       <div key={part}>{part}</div>
                     ))}
                   </div>
