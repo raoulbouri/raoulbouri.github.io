@@ -23,14 +23,16 @@ export const site = {
   gaMeasurementId: "G-YGQK2FFCLB",
 };
 
-export type NavItem = { label: string; href: string };
+// `href` is absolute so links work from every page; `section` is the home-page
+// section id used to highlight the link while scrolling the home page.
+export type NavItem = { label: string; href: string; section: string };
 
 export const nav: NavItem[] = [
-  { label: "Home", href: "#home" },
-  { label: "Projects", href: "#projects" },
-  { label: "Experience", href: "#experience" },
-  { label: "Research", href: "#research" },
-  { label: "Contact", href: "#contact" },
+  { label: "Home", href: "/#home", section: "home" },
+  { label: "Projects", href: "/projects", section: "projects" },
+  { label: "Experience", href: "/#experience", section: "experience" },
+  { label: "Research", href: "/#research", section: "research" },
+  { label: "Contact", href: "/#contact", section: "contact" },
 ];
 
 // Section ids that the sticky nav observes for active-state highlighting.

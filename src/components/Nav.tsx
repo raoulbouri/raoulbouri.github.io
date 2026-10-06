@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { nav } from "@content/site";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -9,6 +10,8 @@ export function Nav() {
   const [active, setActive] = useState<string>("home");
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const onHome = pathname === "/";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -18,7 +21,8 @@ export function Nav() {
   }, []);
 
   useEffect(() => {
-    const ids = nav.map((n) => n.href.replace("#", ""));
+    if (!onHome) return;
+    const ids = nav.map((n) => n.section);
     const sections = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => Boolean(el));
@@ -35,7 +39,7 @@ export function Nav() {
     );
     sections.forEach((s) => observer.observe(s));
     return () => observer.disconnect();
-  }, []);
+  }, [onHome]);
 
   return (
     <header
@@ -44,14 +48,17 @@ export function Nav() {
       }`}
     >
       <nav className="container-max flex h-16 items-center justify-between" aria-label="Primary">
-        <Link href="#home" className="font-mono text-sm font-semibold tracking-tight text-ink">
+        <Link href="/" className="font-mono text-sm font-semibold tracking-tight text-ink">
           rahul<span className="text-accent">.</span>bouri
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">
           {nav.map((item) => {
-            const id = item.href.replace("#", "");
-            const isActive = active === id;
+            // On the home page, highlight the section in view; elsewhere,
+            // highlight Projects on /projects and on case studies.
+            const isActive = onHome
+              ? active === item.section
+              : item.section === "projects" && pathname.startsWith("/projects");
             return (
               <Link
                 key={item.href}

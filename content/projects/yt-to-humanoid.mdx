@@ -1,0 +1,63 @@
+<Clip
+  src="/projects/yt-humanoid-demo.mp4"
+  alt="Four synchronized panels: the input dance video, the estimated 3D skeleton, and the simulated Unitree G1 humanoid copying the dance from the front and from the side."
+  caption="One continuous 40-second take. Top: the input video and the 3D skeleton estimated from it. Bottom: the simulated G1 from the front and the side, re-rendered from its logged state. (The dancer is a CGI character.)"
+/>
+
+Humanoid robots are increasingly taught by watching people. This project runs that idea end to end with NVIDIA's open humanoid stack: **a normal video goes in, and a simulated Unitree G1 reproduces the motion** — balancing on its own, with no motion capture and no robot-specific retargeting.
+
+GEM-X (pose from video) and SONIC (the whole-body controller) are NVIDIA's released models; I did not train them. My work is everything around them — the pipeline that connects them, the simulation setup that runs them reproducibly, and the measurement tools that show how well the robot really follows its input.
+
+## The pipeline
+
+```
+video → GEM-X (3D human pose) → SMPL joints → ZMQ stream → SONIC (whole-body policy) → Unitree G1 in MuJoCo
+```
+
+1. **Perception.** GEM-X detects and tracks the person, estimates 2D keypoints, and lifts them to a 3D body pose for every frame.
+2. **Conversion.** The pose is converted into the 24-joint SMPL skeleton the controller expects.
+3. **Streaming.** Frames are published over ZMQ on an exact real-time schedule.
+4. **Control.** SONIC — a learned policy that maps human motion directly to robot joint targets at 50 Hz — keeps the 29-DoF G1 balanced while it imitates.
+5. **Simulation and recording.** The G1 runs in MuJoCo; the input stream and the robot's joint state are logged on one clock for analysis.
+
+## End-to-end policies
+
+SONIC is an end-to-end whole-body controller: it observes the human skeleton and outputs every joint target directly, with the human-to-robot mapping learned inside the policy rather than hand-written. Getting it running meant building its C++ deployment with TensorRT on new GPUs, verifying it against NVIDIA's reference motions (control loop ≈ 65 µs per step, zero errors), and then feeding it a stream it had never seen: pose estimated from internet video.
+
+## Simulation
+
+- **Headless and scripted.** The MuJoCo simulator runs on a virtual display on a remote GPU machine, viewable live in a browser, and is started, driven and stopped entirely from scripts — including releasing the safety harness that holds the robot up at start.
+- **Re-rendered, synchronized views.** The front and side videos are rendered from the robot's logged state, so both show the identical motion, aligned with the original by the measured latency.
+
+## Data pipeline
+
+- **Video preparation** into clean, constant-frame-rate clips — variable frame rates silently broke pose estimation.
+- **Precompute, then replay on a fixed clock.** NVIDIA's offline replay ran a 24 fps clip at 14 fps because conversion time added to every frame. Converting once and publishing on an absolute schedule fixed it: 1,200 frames in 39.97 s, one late frame in the whole run.
+- **A small fix upstream code needed.** NVIDIA's pose converter crashed on the current body-model release; a 5-line patch, with unit tests, fixed it.
+- **Reproducible setup:** third-party repos pinned to exact commits, one config file, and scripts for every stage.
+
+## Evaluation
+
+The robot "looks like it's dancing" is not a result, so I measured it.
+
+- **Stability:** no falls in any of 7 replays across 3 clips.
+- **Tracking:** on the demo clip, human and robot limb angles correlate at 0.8–0.9 for arms and legs and about 0.6 for torso lean, with a mean error of 11.5°.
+- **Latency:** about 0.4 s from input to robot, found by the delay that best aligns the two motions (correlation rises from 0.59 to 0.86).
+- **Systematic biases:** on every clip the robot holds its arms 15–25° higher and stands more upright than the person — a property of the controller, not noise.
+- **Finding the real bottleneck.** On a yoga clip the robot held its hands far apart during a prayer pose. Checking each stage showed the skeleton it received was already wrong — 0.6 m between hands that were touching. The error came from perception: from a side-on camera, a single view can't see how far apart the hands are. Frontal clips looked much more plausible.
+
+<Specs>
+  <Spec k="Models">NVIDIA GEM-X (pose from video) · NVIDIA SONIC whole-body controller (TensorRT 10.13)</Spec>
+  <Spec k="Robot">Unitree G1, 29 DoF, in MuJoCo; joint targets at 50 Hz</Spec>
+  <Spec k="Measurement">Input stream and robot state on one clock · limb-angle comparison · latency estimation · torso breakdown</Spec>
+  <Spec k="Scope">Simulation only · SONIC used as released · a handful of runs, not a benchmark</Spec>
+</Specs>
+
+## Next
+
+- Test the controller alone on NVIDIA's paired reference data, to separate control error from perception error.
+- Try perception settings that use image features on side-on footage, and real human subjects rather than a CGI dancer.
+
+---
+
+**Code:** [YT-to-humanoid](https://github.com/raoulbouri/YT-to-humanoid) — the full report, setup steps and analysis scripts are in the repo. GEM-X, SONIC and SOMA-X are NVIDIA's; the demo uses frames from "Dame Tu Cosita" (El Chombo, Ultra Records) for visuals only.

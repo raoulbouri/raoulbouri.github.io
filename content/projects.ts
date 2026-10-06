@@ -3,6 +3,15 @@
 
 export type ProjectStatus = "complete" | "ongoing";
 
+// Curated categories for the filter on /projects (tags stay free-form).
+export const categories = {
+  hardware: "Hardware",
+  "robot-learning": "Robot learning",
+  simulation: "Simulation",
+  "estimation-control": "Estimation & control",
+} as const;
+export type Category = keyof typeof categories;
+
 export type Project = {
   slug: string;
   title: string;
@@ -20,11 +29,46 @@ export type Project = {
   cover?: string;
   // Compact, verified result bullets for the card (no fabrication).
   highlights: string[];
+  // Shown on the home page. Exactly 3 projects must be featured.
   featured: boolean;
+  // Position among the featured projects on the home page.
   order: number;
+  // Spans the full width of the projects grid (side-by-side layout on desktop).
+  wide?: boolean;
+  category: Category[];
+  // Machine-readable dates ("YYYY-MM") for sorting; `period` is the display text.
+  // Leave `end` out for work that is still going.
+  start: string;
+  end?: string;
+  // Shorter summary for the dense /projects grid; falls back to `summary`.
+  oneLiner?: string;
 };
 
 export const projects: Project[] = [
+  {
+    slug: "yt-to-humanoid",
+    title: "Video to Humanoid — Whole-Body Imitation on a Simulated G1",
+    status: "complete",
+    period: "Oct 2026",
+    summary:
+      "An ordinary video goes in; a simulated Unitree G1 dances like the person in it. I wired NVIDIA's open perception and whole-body control models into one reproducible pipeline — and measured how faithfully the robot actually follows.",
+    tags: ["Humanoid", "Whole-Body Control", "MuJoCo", "Pose Estimation", "Evaluation"],
+    repo: "https://github.com/raoulbouri/YT-to-humanoid",
+    cover: "/projects/yt-humanoid-card.mp4",
+    highlights: [
+      "End to end: video → 3D human pose → streamed joint targets → a learned whole-body policy balancing a 29-DoF humanoid in MuJoCo",
+      "Robot never fell across 7 replays; human-vs-robot limb angles correlate 0.8–0.9, with 0.4 s measured latency",
+      "Evaluation traced the biggest error to perception, not control — side-on video hides how far apart the hands are",
+    ],
+    featured: true,
+    order: 0,
+    category: ["robot-learning", "simulation"],
+    start: "2026-10",
+    end: "2026-10",
+    oneLiner:
+      "An ordinary video in, a simulated Unitree G1 dancing like the person in it, plus measurements of how faithfully it follows.",
+    wide: true,
+  },
   {
     slug: "f1tenth-autonomy",
     title: "F1TENTH Autonomy Stack — CMU 16-665",
@@ -43,6 +87,11 @@ export const projects: Project[] = [
     ],
     featured: true,
     order: 1,
+    category: ["hardware", "estimation-control"],
+    start: "2026-08",
+    end: "2026-09",
+    oneLiner:
+      "A 1/10-scale race car taken from emergency braking to planning around obstacles, every step run on the real car.",
   },
   {
     slug: "proprioceptive-contact-detection",
@@ -59,8 +108,13 @@ export const projects: Project[] = [
       "Augmented EKF: model disagreement during contact becomes the external-torque estimate",
       "AUC 0.99, detection SNR ~17×, faster than a classical momentum observer with perfect dynamics",
     ],
-    featured: true,
-    order: 3,
+    featured: false,
+    order: 4,
+    category: ["estimation-control", "simulation"],
+    start: "2026-05",
+    end: "2026-06",
+    oneLiner:
+      "Contact torque on a robot arm from joint encoders alone, by turning dynamics-model errors into a signal.",
   },
   {
     slug: "deep-rl-cs285",
@@ -79,7 +133,12 @@ export const projects: Project[] = [
       "SAC from scratch learns a HalfCheetah gait (~4,200 eval return); two robotics papers (ACT, HORA) tied back to the methods",
     ],
     featured: true,
-    order: 4,
+    order: 2,
+    category: ["robot-learning", "simulation"],
+    start: "2026-02",
+    end: "2026-09",
+    oneLiner:
+      "Imitation learning, policy gradients, DQN and SAC built from scratch and run as controlled experiments.",
   },
   {
     slug: "bipedal-walker",
@@ -96,14 +155,33 @@ export const projects: Project[] = [
       "Worst-case pose needs 1.86× the actuator bandwidth of the nominal stand pose — analyze the envelope, not one pose",
       "An RL policy with healthy training curves failed physical gates: duty factor 1.00 means standing, not walking",
     ],
-    featured: true,
-    order: 2,
+    featured: false,
+    order: 3,
+    category: ["hardware", "simulation", "estimation-control"],
+    start: "2026-07",
+    oneLiner:
+      "A self-designed 784 g biped, and the digital-twin validation that caught a simulator too slow to stabilize it.",
   },
 ];
 
 export const featuredProjects = projects
   .filter((p) => p.featured)
   .sort((a, b) => a.order - b.order);
+
+if (featuredProjects.length !== 3) {
+  throw new Error(
+    `content/projects.ts: exactly 3 projects must have featured: true (found ${featuredProjects.length}).`
+  );
+}
+
+// /projects order: in-progress work first, then newest first by end date.
+export const allProjects = [...projects].sort((a, b) => {
+  if (a.status !== b.status) return a.status === "ongoing" ? -1 : 1;
+  const endA = a.end ?? "9999-99";
+  const endB = b.end ?? "9999-99";
+  if (endA !== endB) return endB.localeCompare(endA);
+  return b.start.localeCompare(a.start);
+});
 
 export function getProject(slug: string): Project | undefined {
   return projects.find((p) => p.slug === slug);

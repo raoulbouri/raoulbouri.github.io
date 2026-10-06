@@ -3,21 +3,30 @@ import Image from "next/image";
 import type { Project } from "@content/projects";
 import { LoopVideo } from "./LoopVideo";
 
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({ project, compact = false }: { project: Project; compact?: boolean }) {
   return (
     <Link
       href={`/projects/${project.slug}`}
-      className="card group flex flex-col overflow-hidden"
+      className={`card group flex flex-col overflow-hidden ${
+        project.wide ? "md:flex-row" : ""
+      }`}
     >
       {/* Cover media. Falls back to a schematic placeholder until a real asset
-          is dropped at project.cover. */}
-      <div className="relative aspect-[16/9] overflow-hidden border-b border-border bg-surface-2">
+          is dropped at project.cover. Wide cards put a 16:9 cover beside the
+          text on desktop, letterboxed rather than cropped. */}
+      <div
+        className={`relative overflow-hidden border-b border-border ${
+          project.wide
+            ? "aspect-video bg-black md:aspect-auto md:w-[56%] md:flex-none md:border-b-0 md:border-r"
+            : "aspect-[16/9] bg-surface-2"
+        }`}
+      >
         {project.cover?.endsWith(".mp4") ? (
           <LoopVideo
             src={project.cover}
             poster={project.cover.replace(/\.mp4$/, ".jpg")}
             label={`${project.title} demo`}
-            className="absolute inset-0 h-full w-full object-cover"
+            className={`absolute inset-0 h-full w-full ${project.wide ? "object-contain" : "object-cover"}`}
           />
         ) : project.cover ? (
           <Image
@@ -51,14 +60,16 @@ export function ProjectCard({ project }: { project: Project }) {
         ) : null}
         <p className="mt-2 text-sm leading-relaxed text-muted">{project.summary}</p>
 
-        <ul className="mt-4 space-y-1.5">
-          {project.highlights.slice(0, 3).map((h) => (
-            <li key={h} className="flex gap-2 text-xs leading-relaxed text-faint">
-              <span className="mt-1.5 h-1 w-1 flex-none rounded-full bg-accent" aria-hidden="true" />
-              {h}
-            </li>
-          ))}
-        </ul>
+        {compact ? null : (
+          <ul className="mt-4 space-y-1.5">
+            {project.highlights.slice(0, 3).map((h) => (
+              <li key={h} className="flex gap-2 text-xs leading-relaxed text-faint">
+                <span className="mt-1.5 h-1 w-1 flex-none rounded-full bg-accent" aria-hidden="true" />
+                {h}
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="mt-auto flex flex-wrap gap-1.5 pt-5">
           {project.tags.slice(0, 4).map((t) => (

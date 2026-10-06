@@ -7,6 +7,12 @@ import { useEffect, useRef, useState } from "react";
 // It plays only while on screen (saves battery and data on phones), and for
 // visitors with prefers-reduced-motion it stays paused on its poster frame
 // with native controls, so they can still choose to watch it.
+//
+// Autoplay: React omits the `muted` attribute from server-rendered HTML, so a
+// video given its `src` in that HTML starts loading as unmuted, and Safari
+// then refuses to autoplay it even after it is muted. So the server HTML only
+// carries the poster; the source is attached on the client after the element
+// is muted.
 export function LoopVideo({
   src,
   poster,
@@ -24,29 +30,53 @@ export function LoopVideo({
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (mq.matches) {
+    video.muted = true;
+    video.setAttribute("muted", "");
+    video.src = src;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setReduced(true);
-      video.pause();
       return;
     }
+
+    // A clip already on screen at load asks to play before it has data; if
+    // that first request is refused, try again once the video can play.
+    // Browsers can also refuse a play() made very early in page load, so a
+    // refused attempt is retried a few times with a short backoff.
+    let visible = false;
+    let retries = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tryPlay = () => {
+      if (!visible) return;
+      video.play().catch(() => {
+        if (retries < 4) {
+          retries += 1;
+          timer = setTimeout(tryPlay, 400 * retries);
+        }
+      });
+    };
+    video.addEventListener("canplay", tryPlay);
     const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) video.play().catch(() => {});
+      visible = entry.isIntersecting;
+      if (visible) tryPlay();
       else video.pause();
     });
     io.observe(video);
-    return () => io.disconnect();
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      io.disconnect();
+      video.removeEventListener("canplay", tryPlay);
+    };
+  }, [src]);
 
   return (
     <video
       ref={ref}
-      src={src}
       poster={poster}
       muted
       loop
       playsInline
-      preload="metadata"
+      preload="auto"
       controls={reduced}
       aria-label={label}
       className={className}

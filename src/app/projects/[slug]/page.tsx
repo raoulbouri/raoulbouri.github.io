@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { projects, getProject } from "@content/projects";
+import { projects, allProjects, getProject } from "@content/projects";
 import { getProjectBody } from "@/lib/mdx";
 import { mdxComponents } from "@/components/MdxComponents";
 
@@ -25,11 +25,14 @@ export default async function ProjectPage({ params }: { params: { slug: string }
   if (!project) notFound();
 
   const body = await getProjectBody(params.slug);
+  // "Next project" follows the /projects order and wraps around.
+  const idx = allProjects.findIndex((p) => p.slug === project.slug);
+  const next = allProjects[(idx + 1) % allProjects.length];
 
   return (
     <article className="pt-14 sm:pt-16">
       <div className="mx-auto w-full max-w-3xl px-6 sm:px-8">
-        <Link href="/#projects" className="font-mono text-xs text-muted hover:text-accent">
+        <Link href="/projects" className="font-mono text-xs text-muted hover:text-accent">
           ← All projects
         </Link>
 
@@ -78,7 +81,7 @@ export default async function ProjectPage({ params }: { params: { slug: string }
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-4">
-          <Link href="/#projects" className="btn">
+          <Link href="/projects" className="btn">
             ← All projects
           </Link>
           {project.repo ? (
@@ -89,6 +92,16 @@ export default async function ProjectPage({ params }: { params: { slug: string }
             <p className="max-w-sm text-right text-sm text-faint">{project.codeNote}</p>
           ) : null}
         </div>
+
+        {next && next.slug !== project.slug ? (
+          <Link
+            href={`/projects/${next.slug}`}
+            className="group mb-12 mt-2 block rounded-xl border border-border bg-surface p-5 transition-colors hover:border-accent/50"
+          >
+            <p className="font-mono text-xs text-faint">Next project →</p>
+            <p className="mt-1 font-semibold text-ink group-hover:text-accent">{next.title}</p>
+          </Link>
+        ) : null}
       </div>
     </article>
   );
