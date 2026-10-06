@@ -141,6 +141,29 @@ export const projects: Project[] = [
       "Imitation learning, policy gradients, DQN and SAC built from scratch and run as controlled experiments.",
   },
   {
+    slug: "dmpel-expert-isolation",
+    title: "DMPEL Expert Isolation Analysis",
+    status: "complete",
+    period: "Oct 2026",
+    summary:
+      "Mechanistic analysis of a published continual robot learning method. AdamW weight decay silently shrinks frozen LoRA experts by 20%, causing task collapse. Two independent experiments confirm the diagnosis.",
+    tags: ["Continual Learning", "LoRA", "LIBERO", "PyTorch", "Mechanistic Analysis"],
+    repo: "https://github.com/raoulbouri/CL-benchmark-exps",
+    cover: "/projects/dmpel-task1-card.mp4",
+    highlights: [
+      "Weight decay shrank every frozen LoRA expert by about 20% over 10 tasks, and task 1 collapsed from 1.0 to 0.1.",
+      "Restoring the original expert weights brought task 1 back to 1.0 with no retraining (p=0.0007).",
+      "Holding frozen experts constant during training recovered task 1 to 0.9 (p=0.0011) and raised FWT from 0.607 to 0.683.",
+    ],
+    featured: false,
+    order: 5,
+    category: ["robot-learning", "simulation"],
+    start: "2026-10",
+    end: "2026-10",
+    oneLiner:
+      "Weight decay silently shrank frozen LoRA experts and collapsed a task. Two independent experiments confirm it.",
+  },
+  {
     slug: "bipedal-walker",
     title: "Self-Designed Bipedal Walker",
     status: "ongoing",

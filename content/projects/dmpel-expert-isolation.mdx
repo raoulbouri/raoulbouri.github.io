@@ -1,0 +1,78 @@
+![Task 1: decayed experts hover and fail (left). Fixed model carries both items to the basket (right).](/projects/task1_demo.gif)
+
+<Specs title="At a glance">
+  <Spec k="Built">A reproducible harness to audit and ablate DMPEL, a published LoRA-based continual learning policy for robot manipulation</Spec>
+  <Spec k="Method">Systematic mechanistic analysis: routing drift, mid-episode switching, expert norm tracking, a restore test and a training fix</Spec>
+  <Spec k="Result">Weight decay shrinks frozen expert norms by 20%. Holding them constant recovers a collapsed task (0.1 → 0.9, p=0.0011) and raises FWT by 12.5%.</Spec>
+</Specs>
+
+## The problem
+
+**Why did a task the model had mastered fall apart?**
+
+DMPEL ([arXiv 2506.05985](https://arxiv.org/abs/2506.05985)) freezes a LoRA expert after each task to prevent catastrophic forgetting. A router, trained with coefficient replay, learns to pick the right expert. In my reproduction on LIBERO-Long, one task collapsed. It was learned at 1.0 and fell to 0.1 by the end of the sequence. **The paper offers no explanation for this failure mode.**
+
+## Key idea
+
+**Was the router forgetting, or were the experts changing?**
+
+The router was not forgetting. Coefficient replay kept routing stable, with cosine similarity 0.999 throughout. Routing within an episode was not unstable either. The expert switch rate on Long was 0.83× the rate on Goal, and switches were not concentrated around gripper events (0.89×).
+
+The cause is simpler. The experts are rows of one shared parameter tensor that keeps training. A frozen expert's rows get a zero gradient, not no gradient. AdamW applies decoupled weight decay to every row that has a gradient tensor, including zero ones. So every "frozen" expert shrinks a little at every step. Over 10 tasks, that adds up to about 20%.
+
+## Analysis
+
+**How do you prove the cause, not just find a correlation?**
+
+Five experiments, each designed to isolate one failure mode:
+
+1. **Reproduced DMPEL on LIBERO-Goal.** One seed at ρ=0.05 gave FWT 0.727, NBT 0.056 and AUC 0.800, matching the paper. A 3-seed run at ρ=1.0 gave FWT 0.704 and AUC 0.806.
+2. **Ran DMPEL on LIBERO-Long.** Task 1 collapsed from 1.0 to 0.1. I tracked expert norms across all 10 checkpoints.
+3. **Analysed the router.** I logged per-timestep routing on Long and Goal. This ruled out routing forgetting and phase switching.
+4. **Restore test.** At evaluation, I swapped each expert back to its creation-time weights. Task 1 went from 0.2 to 1.0 with no retraining (Fisher exact p=0.0007).
+5. **Training fix.** I snapshotted the frozen expert rows at the start of each task and wrote them back after every optimizer step. Task 1 went from 0.1 to 0.9 (p=0.0011). FWT rose from 0.607 to 0.683.
+
+![Expert norm decay vs fix](/projects/expert_norm_comparison.png)
+
+*Expert norms decay 20% over 10 tasks when frozen by gradient alone (dashed). Holding them constant keeps norms flat (solid).*
+
+## Results
+
+**Did the fix help beyond the one task?**
+
+<div className="mt-4 overflow-x-auto">
+  <table className="w-full min-w-[22rem] border-collapse font-mono text-xs text-muted">
+    <thead>
+      <tr className="border-b border-border text-left text-ink">
+        <th className="py-2 pr-3 font-medium">Metric</th>
+        <th className="px-2 py-2 font-medium">Decayed</th>
+        <th className="px-2 py-2 font-medium">Fixed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td className="py-1.5 pr-3 text-ink">FWT</td><td className="px-2 py-1.5">0.607</td><td className="px-2 py-1.5">0.683</td></tr>
+      <tr><td className="py-1.5 pr-3 text-ink">NBT</td><td className="px-2 py-1.5">0.027</td><td className="px-2 py-1.5">−0.049</td></tr>
+      <tr><td className="py-1.5 pr-3 text-ink">AUC</td><td className="px-2 py-1.5">0.629</td><td className="px-2 py-1.5">0.679</td></tr>
+      <tr><td className="py-1.5 pr-3 text-ink">Final SR</td><td className="px-2 py-1.5">0.560</td><td className="px-2 py-1.5">0.640</td></tr>
+      <tr><td className="py-1.5 pr-3 text-ink">Task 1 final</td><td className="px-2 py-1.5">0.1</td><td className="px-2 py-1.5">0.9</td></tr>
+    </tbody>
+  </table>
+</div>
+
+*One seed, 10 rollouts per cell. Only the task 1 difference is statistically clear (p=0.0011). The overall final SR gain (p=0.31) is not established.*
+
+![Per-task final success](/projects/final_sr_bar.png)
+
+![Success matrix: decayed vs fixed](/projects/success_matrix_comparison.png)
+
+*Task 1's column fades from 1.0 to 0.1 in the decayed run (left). The fixed run (right) holds 0.7 to 1.0.*
+
+## Limitations
+
+**What does this not show?**
+
+I used one seed throughout. The overall final SR improvement does not reach significance at 10 rollouts per cell. The fix also doesn't explain why the other tasks show no consistent gain. More seeds are needed to separate the task 1 result from general noise.
+
+---
+
+**Repo:** [CL-benchmark-exps](https://github.com/raoulbouri/CL-benchmark-exps)
