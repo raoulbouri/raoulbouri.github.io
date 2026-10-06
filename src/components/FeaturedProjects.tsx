@@ -25,7 +25,9 @@ export function FeaturedProjects() {
             <Reveal
               key={p.slug}
               delay={i * 0.06}
-              className={p.wide ? "flex md:col-span-2 [&>a]:w-full" : undefined}
+              // The grid stretches this wrapper to the row's height; flex makes
+              // the card fill it, so cards in the same row end at the same line.
+              className={`flex [&>a]:w-full ${p.wide ? "md:col-span-2" : ""}`}
             >
               {/* Regular home cards stay light (no highlight bullets); the wide
                   lead card has room for them. */}
